@@ -20,6 +20,10 @@ fn router(request) {
       response.new(200)
       |> response.set_body(template(["templates", "svg_example.html"]))
 
+    Get, "/chat" ->
+      response.new(200)
+      |> response.set_body(template(["templates", "chat.html"]))
+
     _, _ ->
       response.new(404)
       |> response.set_body(bit_builder.from_bit_string(<<"error":utf8>>))
