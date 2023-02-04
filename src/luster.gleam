@@ -2,7 +2,7 @@ import mist
 import gleam/bit_builder
 import gleam/string
 import gleam/erlang/process
-import gleam/http.{Get}
+import gleam/http.{Get, Post}
 import gleam/http/request.{Request}
 import gleam/http/response
 
@@ -11,9 +11,9 @@ pub fn main() -> Nil {
   process.sleep_forever()
 }
 
-fn router(request) {
-  let Request(method, _headers, _body, _scheme, _host, _port, path, _query) =
-    request
+fn router(payload) {
+  let Request(method, _headers, body, _scheme, _host, _port, path, _query) =
+    payload
 
   case method, path {
     Get, "/" ->
@@ -22,7 +22,13 @@ fn router(request) {
 
     Get, "/chat" ->
       response.new(200)
+      |> response.prepend_header("content-type", "text/html; charset=utf-8")
       |> response.set_body(template(["templates", "chat.html"]))
+
+    Post, "/chat/send-message" ->
+      response.new(200)
+      |> response.prepend_header("content-type", "text/vnd.turbo-stream.html; charset=utf-8")
+      |> response.set_body(template(["templates", "turbo_stream", "message.html"]))
 
     _, _ ->
       response.new(404)

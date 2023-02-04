@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 <html>
 
+<style>
+  .messages-box {
+    width: 300px;
+    height: 500px;
+    padding: 0 15px 0 15px;
+    overflow-y: scroll;
+    outline: 1px black solid;
+  }
+  
+  .send-message-box form > input {
+    width: 300px;
+    height: 30px;
+    padding: 0 15px 0 15px;
+    margin: 0;
+    border: 0;
+    outline: 1px black solid;
+  }
+</style>
+
 <script type="module">
   import hotwiredTurbo from 'https://cdn.skypack.dev/@hotwired/turbo';
   Turbo.session.drive = false;
@@ -8,13 +27,19 @@
 
 <body>
 
-  <h2>Form example</h2>
+  <h2>Chat!</h2>
 
-  <form>
-    <input type="text" id="message" name="message">
-    <br>
-    <input type="submit" value="Submit">
-  </form>
+  <section class="messages-box">
+    <ul id="messages">
+    </ul>
+  </section>
+
+  <section class="send-message-box">
+    <form method="post" action="/chat/send-message" data-turbo="true">
+      <input type="text" id="message" name="message">
+      <input type="submit" value="Submit" hidden>
+    </form>
+  </section>
 
 </body>
 
