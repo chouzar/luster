@@ -1,10 +1,14 @@
-import mist
-import gleam/bit_builder
+import gleam/bit_builder.{BitBuilder}
+import gleam/bit_string
 import gleam/string
+import gleam/list
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{Request}
 import gleam/http/response
+import gleam/bbmustache as mustache
+import mist
+import gleam/io
 
 pub fn main() -> Nil {
   assert Ok(Nil) = mist.run_service(8088, router, max_body_limit: 400_000)
@@ -18,17 +22,30 @@ fn router(payload) {
   case method, path {
     Get, "/" ->
       response.new(200)
-      |> response.set_body(template(["templates", "svg_example.html"]))
+      |> response.set_body(render(["templates", "svg_example.html"], []))
 
     Get, "/chat" ->
       response.new(200)
       |> response.prepend_header("content-type", "text/html; charset=utf-8")
-      |> response.set_body(template(["templates", "chat.html"]))
+      |> response.set_body(render(["templates", "chat.html"], []))
 
-    Post, "/chat/send-message" ->
+    Post, "/chat/send-message" -> {
+      let <<"message=":utf8, message:binary>> = body
+
+      assert Ok(message) =
+       message
+        |> bit_string.to_string()
+
       response.new(200)
-      |> response.prepend_header("content-type", "text/vnd.turbo-stream.html; charset=utf-8")
-      |> response.set_body(template(["templates", "turbo_stream", "message.html"]))
+      |> response.prepend_header(
+        "content-type",
+        "text/vnd.turbo-stream.html; charset=utf-8",
+      )
+      |> response.set_body(render(
+        ["templates", "turbo_stream", "message.html"],
+        [#("message", message)],
+      ))
+    }
 
     _, _ ->
       response.new(404)
@@ -36,13 +53,31 @@ fn router(payload) {
   }
 }
 
-fn template(file_path: List(String)) {
+pub fn render(
+  file_path: List(String),
+  params: List(#(String, String)),
+) -> BitBuilder {
+  assert Ok(template) =
+    file_path
+    |> template()
+    |> mustache.compile()
+
+  let params =
+    params
+    |> list.map(fn(param) { #(param.0, mustache.string(param.1)) })
+
+  template
+  |> mustache.render(params)
+  |> bit_builder.from_string()
+}
+
+pub fn template(file_path: List(String)) -> String {
   assert Ok(template) =
     [root(), ..file_path]
     |> path()
     |> read()
 
-  bit_builder.from_string(template)
+  template
 }
 
 fn path(path: List(String)) -> String {
