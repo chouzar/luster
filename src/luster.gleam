@@ -1,14 +1,15 @@
 import gleam/bit_builder.{BitBuilder}
 import gleam/bit_string
-import gleam/string
-import gleam/list
 import gleam/erlang/process
 import gleam/http.{Get, Post}
 import gleam/http/request.{Request}
 import gleam/http/response
-import gleam/bbmustache as mustache
 import mist
-import gleam/io
+import luster/template
+
+// Add "server" module
+// Add middleware "response" module
+// Add a "template" module and type
 
 pub fn main() -> Nil {
   assert Ok(Nil) = mist.run_service(8088, router, max_body_limit: 400_000)
@@ -22,19 +23,16 @@ fn router(payload) {
   case method, path {
     Get, "/" ->
       response.new(200)
-      |> response.set_body(render(["templates", "svg_example.html"], []))
+      |> response.set_body(render(from: ["svg_example.html"], with: []))
 
     Get, "/chat" ->
       response.new(200)
       |> response.prepend_header("content-type", "text/html; charset=utf-8")
-      |> response.set_body(render(["templates", "chat.html"], []))
+      |> response.set_body(render(from: ["chat.html"], with: []))
 
     Post, "/chat/send-message" -> {
       let <<"message=":utf8, message:binary>> = body
-
-      assert Ok(message) =
-       message
-        |> bit_string.to_string()
+      assert Ok(message) = bit_string.to_string(message)
 
       response.new(200)
       |> response.prepend_header(
@@ -42,8 +40,8 @@ fn router(payload) {
         "text/vnd.turbo-stream.html; charset=utf-8",
       )
       |> response.set_body(render(
-        ["templates", "turbo_stream", "message.html"],
-        [#("message", message)],
+        from: ["turbo_stream", "message.html"],
+        with: [#("message", message)],
       ))
     }
 
@@ -53,43 +51,22 @@ fn router(payload) {
   }
 }
 
-pub fn render(
-  file_path: List(String),
-  params: List(#(String, String)),
+fn render(
+  from path: List(String),
+  with params: List(#(String, String)),
 ) -> BitBuilder {
-  assert Ok(template) =
-    file_path
-    |> template()
-    |> mustache.compile()
+  case params {
+    [] ->
+      template.new(["html"])
+      |> template.from(path)
+      |> template.render()
+      |> bit_builder.from_string()
 
-  let params =
-    params
-    |> list.map(fn(param) { #(param.0, mustache.string(param.1)) })
-
-  template
-  |> mustache.render(params)
-  |> bit_builder.from_string()
+    [_, ..] ->
+      template.new(["html"])
+      |> template.from(path)
+      |> template.with(params)
+      |> template.render()
+      |> bit_builder.from_string()
+  }
 }
-
-pub fn template(file_path: List(String)) -> String {
-  assert Ok(template) =
-    [root(), ..file_path]
-    |> path()
-    |> read()
-
-  template
-}
-
-fn path(path: List(String)) -> String {
-  string.join(path, with: "/")
-}
-
-fn root() -> String {
-  string.join([cwd(), "src"], with: "/")
-}
-
-external fn cwd() -> String =
-  "Elixir.File" "cwd!"
-
-external fn read(path: String) -> Result(String, error) =
-  "Elixir.File" "read"
