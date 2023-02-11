@@ -1,7 +1,6 @@
 import gleam/bit_builder.{BitBuilder}
 import gleam/map.{Map}
 import gleam/erlang/process
-import gleam/http.{Get, Post}
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import mist
@@ -18,7 +17,6 @@ pub fn run(
     |> middleware.to_bit_builder()
   }
 
-  // launch server
   assert Ok(Nil) = mist.run_service(port, service, max_body_limit: 400_000)
   process.sleep_forever()
 }
