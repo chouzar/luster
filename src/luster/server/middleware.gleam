@@ -5,11 +5,14 @@ import gleam/uri
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 
-pub fn process_form(req: Request(BitString)) -> Request(Map(String, String)) {
+pub type FormFields =
+  Map(String, String)
+
+pub fn process_form(req: Request(BitString)) -> Request(FormFields) {
   request.map(req, decode_uri_string)
 }
 
-fn decode_uri_string(value: BitString) -> Map(String, String) {
+fn decode_uri_string(value: BitString) -> FormFields {
   // An alternative is to use the: 
   // * `uri_string:dissect_query` from erlang
   // * `Plug.Conn.Query.decode` from elixir's Plug
