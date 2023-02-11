@@ -1,15 +1,6 @@
-import gleam/bit_builder.{BitBuilder}
-import gleam/bit_string
 import gleam/string
 import gleam/list
-import gleam/map.{Map}
-import gleam/erlang/process
-import gleam/http.{Get, Post}
-import gleam/http/request.{Request}
-import gleam/http/response
 import gleam/bbmustache as mustache
-import mist
-import gleam/io
 
 pub opaque type Template {
   Template(
