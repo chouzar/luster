@@ -15,6 +15,10 @@ fn handle_request(request) {
 
     http.Post, "/chat/send-message" -> chat.send_message(request)
 
+    http.Get, "/chat/click/example" -> chat.click_example(request)
+
+    http.Get, "/chat/click/lazy" -> chat.click_example_lazy(request)
+
     _, _ -> general.error(request)
   }
 }
