@@ -1,0 +1,113 @@
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.board {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+}
+
+.board>.line {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 8;
+}
+
+.board>.deck {
+  flex-grow: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.board>.line>.hand {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 2;
+  justify-content: center;
+  align-items: center;
+}
+
+
+.board>.line>.battleline {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 6;
+  justify-content: center;
+  align-items: center;
+}
+
+.board>.deck>.draw-pile {
+ position: relative;
+ height: 10.5vh; 
+ width: 7.5vh; 
+}
+
+.card {
+  /* standard size card 3.5in by 2.5in */
+  height: 10.5vh;
+  width: 7.5vh;
+  border-radius: 0.75vh;
+  margin: 3px;
+}
+
+.draw-pile>.card {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  margin: 0px;
+}
+
+.battleline>.card {
+  margin: 6px;
+}
+
+.card.clouds {
+  outline: 1px solid #604848;
+  
+  /* from https://codepen.io/t_afif/pen/QWrpmYz */  
+  --s: 1.5vh; /* control the size */
+  --c1: #CCBF82;
+  --c2: #604848;
+  
+  --_g: var(--c1)        6.2%,var(--c2)  6.3% 18.7%,var(--c1) 18.8% 31.2%,
+        var(--c2) 31.3% 43.7%,var(--c1) 43.8% 56.2%,var(--c2) 56.3% 68.7%,#0000 68.8%;
+  background:
+    radial-gradient(var(--s) at 100% 0   ,var(--_g)),
+    radial-gradient(var(--s) at 0    0   ,var(--_g)),
+    radial-gradient(var(--s) at 0    100%,var(--_g)),
+    radial-gradient(var(--s) at 100% 100%,var(--_g)) var(--c1);
+  background-size: var(--s) var(--s);
+}
+
+.card.diamonds {
+  outline: 1px solid #88A65E;
+  
+  /* from https://codepen.io/t_afif/pen/NWzEVgW */
+  --s: 0.75vh; /* control the size */
+  --b: 0.30vh; /* control the thickness of the curved lines */
+  
+  --_r: calc(1.28*var(--s) + var(--b)/2) at top 50%;
+  --_f: calc(99.5% - var(--b)),#F9F2E7 calc(101% - var(--b)) 99.5%,#0000 101%;
+  --_g0: calc(-.8*var(--s)), #88A65E var(--_f);
+  --_g1: calc(-.8*var(--s)), #BFB35A var(--_f);
+  --_s: calc(1.8*var(--s) + var(--b));
+  background: 
+    radial-gradient(var(--_r) right var(--_g0)) calc(-1*var(--_s)) var(--s),
+    radial-gradient(var(--_r) left  var(--_g1))         var(--_s)  calc(-1*var(--s)),
+    radial-gradient(var(--_r) right var(--_g1)) calc(var(--_s)/-2) calc(-1*var(--s)),
+    radial-gradient(var(--_r) left  var(--_g0)) calc(var(--_s)/ 2) var(--s),
+    linear-gradient(90deg,#88A65E 50%,#BFB35A 0);
+  background-size: var(--_s) calc(4*var(--s)); 
+}
+
+/* Other styles 
+https://codepen.io/leemark/pen/kQJJZm
+https://codepen.io/yoksel/pen/nbPjOZ
+https://codepen.io/yoksel/pen/ANZBzJ
+https://codepen.io/yoksel/pen/nJgdbx
+https://codepen.io/yoksel/pen/ANQrNz
+https://codepen.io/apo11oCreed/pen/WNEgJE
+*/

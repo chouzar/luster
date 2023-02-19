@@ -31,16 +31,21 @@ pub fn from(template: Template, path: List(String)) -> Template {
   Template(..template, path: path, render: render)
 }
 
-pub fn with(template: Template, params: List(#(String, String))) -> Template {
-  let parameters = list.map(params, fn(p) { #(p.0, mustache.string(p.1)) })
-
-  assert Ok(compiled) = mustache.compile(template.render)
-  let render = mustache.render(compiled, parameters)
-  Template(..template, params: params, render: render)
+pub fn args(
+  template: Template,
+  replace key: String,
+  with value: String,
+) -> Template {
+  let params = [#(key, value), ..template.params]
+  Template(..template, params: params)
 }
 
 pub fn render(template: Template) -> String {
-  template.render
+  let parameters =
+    list.map(template.params, fn(p) { #(p.0, mustache.string(p.1)) })
+
+  assert Ok(compiled) = mustache.compile(template.render)
+  mustache.render(compiled, parameters)
 }
 
 fn build_path(path: List(String)) -> String {
