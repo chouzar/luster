@@ -33,12 +33,16 @@ pub type Player {
 }
 
 pub type Suit {
-  Green
-  Red
-  Blue
-  Orange
-  Purple
-  Yellow
+  //Green
+  //Red
+  //Blue
+  //Orange
+  //Purple
+  //Yellow
+  Spade
+  Heart
+  Diamond
+  Club
 }
 
 pub type Card {
@@ -82,8 +86,8 @@ fn new_battle_line() -> BattleLine {
 
 fn new_deck() -> List(Card) {
   list.shuffle({
-    use rank <- list.flat_map([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    use suit <- list.map([Green, Red, Blue, Orange, Purple, Yellow])
+    use rank <- list.flat_map([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+    use suit <- list.map([Spade, Heart, Diamond, Club])
     new_card(rank, suit)
   })
 }
@@ -94,13 +98,13 @@ fn new_hands() -> Map(Player, List(Card)) {
   |> map.insert(Persia, [])
 }
 
-fn draw_card(state: GameState, for player: Player) -> GameState {
+pub fn draw_card(state: GameState, for player: Player) -> #(Card, GameState) {
   let [card, ..deck] = state.deck
 
   assert Ok(hand) = map.get(state.hands, player)
   let hands = map.insert(state.hands, player, [card, ..hand])
 
-  GameState(..state, deck: deck, hands: hands)
+  #(card, GameState(..state, deck: deck, hands: hands))
 }
 
 fn random_player() -> Player {

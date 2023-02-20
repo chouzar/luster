@@ -22,6 +22,10 @@ fn handle_request(request) {
 
     http.Get, "/battleline" -> battleline.index(request)
 
+    http.Post, "/battleline/draw-card" -> battleline.draw_card(request)
+
+    http.Post, "/battleline/draw-special" -> battleline.draw_card(request)
+
     http.Get, "/battleline/css" -> battleline.css(request)
 
     http.Get, "/battleline/favicon" -> battleline.favicon(request)
