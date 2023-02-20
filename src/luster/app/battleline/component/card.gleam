@@ -2,6 +2,7 @@ import gleam/int
 import gleam/float
 import gleam/string
 import gleam/list
+import gleam/option.{None, Option, Some}
 import gleam/string_builder
 import luster/server/template
 import luster/battleline.{Card, Club, Diamond, Heart, Spade}
@@ -47,7 +48,7 @@ pub fn render_hand_front(hand: List(Card)) -> String {
 }
 
 pub fn render_back(back: Background) {
-  render_back_offset(back, #(0.0, 0.0))
+  render_back_offset(back, None)
 }
 
 pub fn render_draw_pile(deck: List(Card)) -> String {
@@ -58,37 +59,38 @@ pub fn render_special_draw_pile(deck: List(Card)) -> String {
   render_pile(deck, Spades)
 }
 
-fn render_pile(deck: List(Card), back: Background) {
+fn render_pile(deck: List(Card), back: Background) -> String {
   let pixels = 12.0
   let card_count = list.length(deck)
   assert Ok(step) = float.divide(pixels, int.to_float(card_count))
+  assert Ok(step) = float.divide(step, 6.0)
 
   string_builder.to_string({
     use builder, _times, index <- repeat(card_count, string_builder.new())
     let index = int.to_float(index)
     let offset = float.multiply(index, step)
-    let card = render_back_offset(back, #(offset, offset))
+    let card = render_back_offset(back, Some(#(offset, offset)))
     string_builder.append(builder, card)
   })
 }
 
-fn render_back_offset(back: Background, position_offset: #(Float, Float)) {
+fn render_back_offset(back: Background, pos_offset: Option(#(Float, Float))) {
   let background = case back {
     Clouds -> "clouds"
     Spades -> "spades"
   }
 
-  let styles = case position_offset {
-    #(0.0, 0.0) -> ""
-    #(x, y) ->
+  let styles = case pos_offset {
+    None -> ""
+    Some(#(x, y)) ->
       string.join(
         [
           "bottom:",
           float.to_string(y),
-          "px;",
+          "em;",
           "right:",
           float.to_string(x),
-          "px;",
+          "em;",
         ],
         "",
       )

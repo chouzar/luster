@@ -113,8 +113,6 @@ body {
 
 .draw-pile .card {
   position: absolute;
-  top: 0px;
-  right: 0px;
   margin: 0px;
 }
 

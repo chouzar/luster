@@ -17,7 +17,7 @@ pub fn index(_: Request(FormFields)) -> Response(String) {
   let body =
     template.new(["src", "luster", "app", "battleline", "component"])
     |> template.from(["index.html"])
-    |> template.args(replace: "card-draw-pile", with: "")
+    |> template.args(replace: "card-draw-pile", with: draw_pile)
     |> template.render()
 
   response.new(200)
