@@ -46,7 +46,7 @@ pub type Suit {
 }
 
 pub type Card {
-  Troop(name: String, rank: Int, suit: Suit)
+  Normal(rank: Int, suit: Suit)
 }
 
 type Formation {
@@ -121,22 +121,7 @@ fn play_card(line: BattleLine, card: Card, index: Int) -> BattleLine {
 }
 
 fn new_card(rank: Int, suit: Suit) -> Card {
-  Troop(rank: rank, suit: suit, name: names(rank))
-}
-
-fn names(rank: Int) -> String {
-  case rank {
-    1 -> "skirmisher"
-    2 -> "peltast"
-    3 -> "javalineers"
-    4 -> "hoplites"
-    5 -> "phalangists"
-    6 -> "hypaspist"
-    7 -> "light cavalry"
-    8 -> "heavy cavalry"
-    9 -> "chariots"
-    10 -> "elephants"
-  }
+  Normal(rank: rank, suit: suit)
 }
 
 fn available_slots(line: BattleLine, for player: Player) -> List(Int) {
