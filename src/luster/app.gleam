@@ -1,4 +1,5 @@
-import gleam/http
+import gleam/http.{Get, Post}
+import gleam/http/request
 import luster/server
 import luster/app/general
 import luster/app/chat
@@ -10,18 +11,21 @@ pub fn run() -> Nil {
 
 fn handle_request(request) {
   case request.method, request.path {
-    http.Get, "/" -> general.index(request)
+    Get, "/" -> general.index(request)
 
-    http.Get, "/chat" -> chat.index(request)
-    http.Post, "/chat/send-message" -> chat.send_message(request)
-    http.Get, "/chat/click/example" -> chat.click_example(request)
-    http.Get, "/chat/click/lazy" -> chat.click_example_lazy(request)
+    Get, "/chat" -> chat.index(request)
+    Post, "/chat/send-message" -> chat.send_message(request)
+    Get, "/chat/click/example" -> chat.click_example(request)
+    Get, "/chat/click/lazy" -> chat.click_example_lazy(request)
 
-    http.Get, "/battleline" -> battleline.index(request)
-    http.Get, "/battleline/css" -> battleline.css(request)
-    http.Get, "/battleline/favicon" -> battleline.favicon(request)
-    http.Post, "/battleline/draw-card" -> battleline.draw_card(request)
-    http.Post, "/battleline/draw-special" -> battleline.draw_card(request)
+    method, _path ->
+      case method, request.path_segments(request) {
+        Get, ["battleline"] -> battleline.index(request)
+        Post, ["battleline", "draw-card"] -> battleline.draw_card(request)
+        Post, ["battleline", "draw-special"] -> battleline.draw_card(request)
+
+        Get, ["battleline", "assets", ..path] -> battleline.assets(path)
+      }
 
     _, _ -> general.error(request)
   }

@@ -41,21 +41,11 @@ pub fn draw_card(req: Request(FormFields)) -> Response(String) {
   |> response.set_body(body)
 }
 
-pub fn favicon(_: Request(FormFields)) -> Response(String) {
+pub fn assets(path: List(String)) -> Response(String) {
   response.new(200)
   |> response.set_body(
-    template.new(["src", "luster", "app", "battleline", "component"])
-    |> template.from(["favicon.ico"])
-    |> template.render(),
-  )
-}
-
-pub fn css(_: Request(FormFields)) -> Response(String) {
-  response.new(200)
-  |> response.prepend_header("content-type", mime.css)
-  |> response.set_body(
-    template.new(["src", "luster", "app", "battleline", "component"])
-    |> template.from(["styles.css"])
+    template.new(["src", "luster", "app", "battleline", "assets"])
+    |> template.from(path)
     |> template.render(),
   )
 }
