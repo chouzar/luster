@@ -1,19 +1,48 @@
+import gleam/string_builder.{StringBuilder}
 import luster/server/template
 
 pub type Action {
   Append
   Prepend
   Replace
+  Update
   Remove
   Before
   After
 }
 
-pub fn render(action: Action, target: String, content: String) -> String {
+pub opaque type Stream {
+  Stream(builder: StringBuilder)
+}
+
+pub fn new() -> Stream {
+  string_builder.new()
+  |> Stream()
+}
+
+pub fn add(
+  stream: Stream,
+  do action: Action,
+  at target: String,
+  with content: String,
+) -> Stream {
+  let content = wrap(action, target, content)
+  stream.builder
+  |> string_builder.append(content)
+  |> Stream()
+}
+
+pub fn render(stream: Stream) -> String {
+  stream.builder
+  |> string_builder.to_string()
+}
+
+fn wrap(action: Action, target: String, content: String) -> String {
   let action = case action {
     Append -> "append"
     Prepend -> "prepend"
     Replace -> "replace"
+    Update -> "update"
     Remove -> "remove"
     Before -> "before"
     After -> "after"
