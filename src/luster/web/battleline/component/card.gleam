@@ -31,7 +31,7 @@ pub fn render_front(card: Card) -> String {
 
   let rank = int.to_string(card.rank)
 
-  template.new(["src", "luster", "app", "battleline", "component"])
+  template.new(["src", "luster", "web", "battleline", "component"])
   |> template.from(["card_front.html"])
   |> template.args(replace: "suit", with: suit)
   |> template.args(replace: "rank", with: rank)
@@ -96,7 +96,7 @@ fn render_back_offset(back: Background, pos_offset: Option(#(Float, Float))) {
       )
   }
 
-  template.new(["src", "luster", "app", "battleline", "component"])
+  template.new(["src", "luster", "web", "battleline", "component"])
   |> template.from(["card_back.html"])
   |> template.args(replace: "background", with: background)
   |> template.args(replace: "styles", with: styles)

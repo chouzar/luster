@@ -1,9 +1,9 @@
 import gleam/http.{Get, Post}
 import gleam/http/request
 import luster/server
-import luster/app/general
-import luster/app/chat
-import luster/app/battleline
+import luster/web/general
+import luster/web/chat
+import luster/web/battleline
 
 pub fn run() -> Nil {
   server.run(8088, handle_request)

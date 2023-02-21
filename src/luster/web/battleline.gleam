@@ -5,8 +5,8 @@ import luster/server/middleware.{FormFields}
 import luster/server/mime
 import luster/server/template
 import luster/battleline.{GameState, Persia}
-import luster/app/battleline/component/turbo_stream.{Append, Update}
-import luster/app/battleline/component/card
+import luster/web/battleline/component/turbo_stream.{Append, Update}
+import luster/web/battleline/component/card
 
 pub fn index(_: Request(FormFields)) -> Response(String) {
   let state = load("1234567890")
@@ -15,7 +15,7 @@ pub fn index(_: Request(FormFields)) -> Response(String) {
 
   // TODO: create a layout component
   let body =
-    template.new(["src", "luster", "app", "battleline", "component"])
+    template.new(["src", "luster", "web", "battleline", "component"])
     |> template.from(["index.html"])
     |> template.args(replace: "draw-pile", with: draw_pile)
     |> template.render()
@@ -50,7 +50,7 @@ pub fn draw_card(req: Request(FormFields)) -> Response(String) {
 pub fn assets(path: List(String)) -> Response(String) {
   response.new(200)
   |> response.set_body(
-    template.new(["src", "luster", "app", "battleline", "assets"])
+    template.new(["src", "luster", "web", "battleline", "assets"])
     |> template.from(path)
     |> template.render(),
   )
