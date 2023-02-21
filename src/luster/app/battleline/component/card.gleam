@@ -2,8 +2,8 @@ import gleam/int
 import gleam/float
 import gleam/string
 import gleam/list
-import gleam/option.{None, Option, Some}
 import gleam/string_builder
+import gleam/option.{None, Option, Some}
 import luster/server/template
 import luster/battleline.{Card, Club, Diamond, Heart, Spade}
 

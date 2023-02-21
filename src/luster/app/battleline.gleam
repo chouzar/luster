@@ -5,7 +5,7 @@ import luster/server/middleware.{FormFields}
 import luster/server/mime
 import luster/server/template
 import luster/battleline.{GameState, Persia}
-import luster/app/battleline/component/turbo_stream.{Append}
+import luster/app/battleline/component/turbo_stream.{Append, Update}
 import luster/app/battleline/component/card
 
 pub fn index(_: Request(FormFields)) -> Response(String) {
@@ -17,7 +17,7 @@ pub fn index(_: Request(FormFields)) -> Response(String) {
   let body =
     template.new(["src", "luster", "app", "battleline", "component"])
     |> template.from(["index.html"])
-    |> template.args(replace: "card-draw-pile", with: draw_pile)
+    |> template.args(replace: "draw-pile", with: draw_pile)
     |> template.render()
 
   response.new(200)
@@ -31,10 +31,16 @@ pub fn draw_card(req: Request(FormFields)) -> Response(String) {
 
   let state = load("1234567890")
 
-  let #(card, _state) = battleline.draw_card(state, for: Persia)
+  let #(card, state) = battleline.draw_card(state, for: Persia)
 
   let card = card.render_front(card)
-  let body = turbo_stream.render(Append, "player-hand", card)
+  let draw_pile = card.render_draw_pile(state.deck)
+
+  let body =
+    turbo_stream.new()
+    |> turbo_stream.add(draw_pile, do: Update, at: "draw-pile")
+    |> turbo_stream.add(card, do: Append, at: "player-hand")
+    |> turbo_stream.render()
 
   response.new(200)
   |> response.prepend_header("content-type", mime.turbo_stream)

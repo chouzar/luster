@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width" />
   <title>battleline</title>
-  <link rel="icon" type="image/x-icon" href="/battleline/favicon" />
-  <link rel="stylesheet" href="/battleline/css" />
+  <link rel="icon" type="image/x-icon" href="/battleline/assets/favicon.ico" />
+  <link rel="stylesheet" href="/battleline/assets/styles.css" />
 </head>
 
 <script type="module">
@@ -59,8 +59,8 @@
 
     <div class="deck">
       <section class="draw-pile">
-        <button form="draw-card" data-turbo="true">
-          {{{card-draw-pile}}}
+        <button id="draw-pile" form="draw-card">
+        {{{draw-pile}}}
         </button>
       </section>
     </div>
