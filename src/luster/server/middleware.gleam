@@ -13,6 +13,7 @@ pub fn process_form(req: Request(BitString)) -> Request(FormFields) {
 }
 
 fn decode_uri_string(value: BitString) -> FormFields {
+  //application/x-www-form-urlencoded
   // An alternative is to use the: 
   // * `uri_string:dissect_query` from erlang
   // * `Plug.Conn.Query.decode` from elixir's Plug

@@ -11,12 +11,12 @@ pub opaque type Template {
   )
 }
 
-pub fn new(path: List(String)) -> Template {
+pub fn new(path: String) -> Template {
   Template(
     render: "",
     params: [],
     path: "",
-    base_path: build_path([root(), ..path]),
+    base_path: build_path([root(), path]),
   )
 }
 

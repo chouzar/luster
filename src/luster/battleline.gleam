@@ -33,12 +33,6 @@ pub type Player {
 }
 
 pub type Suit {
-  //Green
-  //Red
-  //Blue
-  //Orange
-  //Purple
-  //Yellow
   Spade
   Heart
   Diamond

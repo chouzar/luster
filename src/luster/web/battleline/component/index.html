@@ -16,8 +16,7 @@
 
 <body>
 
-  <form id="draw-card" method="post" action="/battleline/draw-card">
-    <input type="hidden" name="session" value="1234567890" />
+  <form id="draw-card" method="post" action="/battleline/{{session-id}}/draw-card">
     <input type="hidden" name="player" value="000000" />
   </form>
 

@@ -60,21 +60,17 @@ pub fn render_special_draw_pile(deck: List(Card)) -> String {
 }
 
 fn render_pile(deck: List(Card), back: Background) -> String {
-  let pixels = 12.0
-  let card_count = list.length(deck)
-  assert Ok(step) = float.divide(pixels, int.to_float(card_count))
-  assert Ok(step) = float.divide(step, 6.0)
+   assert Ok(cards) = int.divide(list.length(deck) + 2, 3)
 
   string_builder.to_string({
-    use builder, _times, index <- repeat(card_count, string_builder.new())
-    let index = int.to_float(index)
-    let offset = float.multiply(index, step)
+    use builder, _times, index <- repeat(cards, string_builder.new())
+    let offset = index * 1
     let card = render_back_offset(back, Some(#(offset, offset)))
     string_builder.append(builder, card)
   })
 }
 
-fn render_back_offset(back: Background, pos_offset: Option(#(Float, Float))) {
+fn render_back_offset(back: Background, pos_offset: Option(#(Int, Int))) {
   let background = case back {
     Clouds -> "clouds"
     Spades -> "spades"
@@ -86,11 +82,11 @@ fn render_back_offset(back: Background, pos_offset: Option(#(Float, Float))) {
       string.join(
         [
           "bottom:",
-          float.to_string(y),
-          "em;",
+          int.to_string(y),
+          "px;",
           "right:",
-          float.to_string(x),
-          "em;",
+          int.to_string(x),
+          "px;",
         ],
         "",
       )
