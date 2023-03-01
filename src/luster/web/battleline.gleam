@@ -6,7 +6,6 @@ import luster/server/middleware.{FormFields}
 import luster/server/mime
 import luster/server/template
 import luster/battleline.{GameState, Persia}
-import luster/web.{Request, Response}
 import luster/web/context.{Context}
 import luster/web/battleline/component/turbo_stream.{Append, Update}
 import luster/web/battleline/component/card

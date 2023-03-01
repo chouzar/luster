@@ -10,30 +10,11 @@ import luster/web/arcade
 import luster/web/chat
 import luster/web/battleline.{GameState}
 import luster/web/session
+import luster/web/payload
 import gleam/io
 
 pub type Context {
   Context(session: Subject(GameState))
-}
-
-// TODO: Form params could be stricter to avoid assertions
-pub type Request {
-  FormRequest(
-    method: Method,
-    path: String,
-    form: Map(String, String),
-    // context could be parametrized or optional
-    context: Context,
-  )
-}
-
-pub type Response {
-  // template can have implicit status 200
-  Template(mime: Mime, template: Template)
-  Static(mime: Mime, path: String)
-  Redirect(location: Uri)
-  Flash(message: String, color: RGB)
-  NotFound(message: String)
 }
 
 pub fn service(
@@ -41,13 +22,12 @@ pub fn service(
 ) -> repsonse.Response(BitBuilder) {
   assert Ok(subject) = session.start(Nil)
   let context = Context(session: subject)
-  // Pass request through middleware to transform request/response
+
   request
-  // If this is a form request we should return a `FormRequest` response
   |> middleware.process_form()
-  |> middleware.from_mist_request()
+  |> middleware.from_mist_request(context)
   |> router()
-  |> middleware.to_mist_request()
+  |> middleware.into_mist_response()
   |> middleware.to_bit_builder()
 }
 
@@ -56,11 +36,6 @@ fn router(request: Request) -> Response {
     Get, "/" -> arcade.index()
     Put, "/new-battleline" -> arcade.new_battleline(request.context)
     Get, "/error-message" -> arcade.error_message(request.context)
-
-    Get, "/chat" -> chat.index(request)
-    Post, "/chat/send-message" -> chat.send_message(request)
-    Get, "/chat/click/example" -> chat.click_example(request)
-    Get, "/chat/click/lazy" -> chat.click_example_lazy(request)
 
     method, _path ->
       case method, request.path_segments(request) {

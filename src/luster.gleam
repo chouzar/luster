@@ -17,7 +17,6 @@ pub fn main() -> Nil {
   //    children
   //    |> supervisor.add(supervisor.worker(session.start))
   //  })
-
   assert Ok(Nil) = mist.run_service(8088, web.service, max_body_limit: 400_000)
   process.sleep_forever()
 }
