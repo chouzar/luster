@@ -1,8 +1,7 @@
 //import gleam/otp/supervisor
 import gleam/erlang/process
-import luster/battleline
-import luster/session
 import luster/web
+import luster/session
 import mist
 
 //import gleam/erlang/process
@@ -19,6 +18,11 @@ pub fn main() -> Nil {
   //    children
   //    |> supervisor.add(supervisor.worker(session.start))
   //  })
-  assert Ok(Nil) = mist.run_service(8088, web.service, max_body_limit: 400_000)
+
+  // Starts 1 instance of the session server
+  assert Ok(session) = session.start(Nil)
+
+  assert Ok(Nil) =
+    mist.run_service(8088, web.service(session), max_body_limit: 400_000)
   process.sleep_forever()
 }

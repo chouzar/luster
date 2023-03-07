@@ -9,13 +9,13 @@ import luster/battleline.{Card, Club, Diamond, Heart, Spade}
 
 pub type Background {
   Clouds
-  Spades
+  Diamonds
 }
 
 pub fn render(back: Background) {
   let background = case back {
     Clouds -> "clouds"
-    Spades -> "spades"
+    Diamonds -> "diamonds"
   }
 
   template.new("src/luster/web/battleline/component")

@@ -48,7 +48,7 @@ fn wrap(action: Action, target: String, content: String) -> String {
     After -> "after"
   }
 
-  template.new("src/luster/web/battleline/component")
+  template.new("src/luster/web/component")
   |> template.from("turbo_stream.html")
   |> template.args(replace: "action", with: action)
   |> template.args(replace: "target", with: target)

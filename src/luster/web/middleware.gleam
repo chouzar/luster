@@ -7,8 +7,8 @@ import gleam/http/response.{Response}
 import luster/web/payload
 import luster/web/template
 
-pub fn process_form(req: Request(BitString)) -> Request(Map(String, String)) {
-  request.map(req, decode_uri_string)
+pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
+  request.map(request, decode_uri_string)
 }
 
 fn decode_uri_string(value: BitString) -> Map(String, String) {
@@ -26,7 +26,8 @@ pub fn from_mist_request(
 ) -> payload.Request(context) {
   payload.Request(
     method: req.method,
-    path: request.path_segments(req),
+    path: req.path,
+    path_segments: request.path_segments(req),
     form_data: req.body,
     context: context,
   )
@@ -39,15 +40,15 @@ pub fn into_mist_response(resp: payload.Response) -> Response(String) {
       |> response.prepend_header("content-type", payload.content_type(mime))
       |> response.set_body(templ)
 
-    //|> template.render(),
-    payload.Static(mime, path) ->
+    payload.Static(mime, path, file) ->
       response.new(200)
+      |> response.prepend_header("content-type", payload.content_type(mime))
       |> response.set_body(
         template.new(path)
+        |> template.from(file)
         |> template.render(),
       )
 
-    //|> template.render(),
     payload.Redirect(location: path) ->
       response.new(303)
       |> response.prepend_header("location", path)
@@ -64,8 +65,6 @@ pub fn into_mist_response(resp: payload.Response) -> Response(String) {
         |> template.render(),
       )
 
-    //|> template.render(),
-    // May not be relevant, as this will only ocurr at the route level
     payload.NotFound(message) ->
       response.new(404)
       |> response.set_body(message)
