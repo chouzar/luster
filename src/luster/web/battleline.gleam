@@ -3,11 +3,10 @@ import luster/battleline.{GameState, Persia}
 import luster/web/payload.{HTML, Render, Request, Response, TurboStream}
 import luster/web/component/turbo_stream.{Append, Update}
 import luster/web/context.{Context}
+import luster/web/template
 import luster/web/battleline/component/card_front
 import luster/web/battleline/component/card_back
 import luster/web/battleline/component/card_pile
-import luster/web/battleline/component/board
-import luster/web/battleline/component/layout
 
 pub type Parameters {
   // Param decoding should happen in this module
@@ -19,14 +18,19 @@ pub type Parameters {
 pub fn index(request: Request(Context), session_id: String) -> Response {
   let state = session.get(request.context.session, session_id)
 
+  let odd_pile = card_pile.render(state.deck, card_back.Diamonds)
+  let draw_pile = card_pile.render(state.deck, card_back.Clouds)
   // TODO: Being able to compose the template, with the ideas behind turbo_stream
   // * Both could be structural composed at the end
   // * Or just do a single `component` that can be embedded.
   Render(
     mime: HTML,
-    document: state
-    |> board.render(session_id)
-    |> layout.render(),
+    document: template.new("src/luster/web/battleline/template")
+    |> template.from("layout.html")
+    |> template.args(replace: "odd-pile", with: odd_pile)
+    |> template.args(replace: "draw-pile", with: draw_pile)
+    |> template.args(replace: "session-id", with: session_id)
+    |> template.render(),
   )
 }
 
@@ -36,9 +40,9 @@ pub fn draw_card(request: Request(Context), session_id: String) -> Response {
 
   assert Nil = session.set(request.context.session, session_id, state)
 
-  let card = card_front.render(card)
   let odd_pile = card_pile.render(state.deck, card_back.Diamonds)
   let draw_pile = card_pile.render(state.deck, card_back.Clouds)
+  let card = card_front.render(card)
 
   Render(
     mime: TurboStream,

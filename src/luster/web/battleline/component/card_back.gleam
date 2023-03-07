@@ -1,11 +1,4 @@
-import gleam/int
-import gleam/float
-import gleam/string
-import gleam/list
-import gleam/string_builder
-import gleam/option.{None, Option, Some}
 import luster/web/template
-import luster/battleline.{Card, Club, Diamond, Heart, Spade}
 
 pub type Background {
   Clouds

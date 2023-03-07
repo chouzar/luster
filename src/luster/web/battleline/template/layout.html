@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>battleline</title>
+  <link rel="icon" type="image/x-icon" href="/assets/battleline/favicon.ico" />
+  <link rel="stylesheet" href="/assets/battleline/styles.css" />
+</head>
+
+<script type="module">
+  import hotwiredTurbo from 'https://cdn.skypack.dev/@hotwired/turbo';
+//Turbo.session.drive = false;
+</script>
+
+<body>
+  <form id="draw-card" method="post" action="/battleline/{{session-id}}/draw-card">
+    <input type="hidden" name="player" value="000000" />
+  </form>
+
+  <div class="board">
+    <div class="deck">
+      <section class="draw-pile">
+        <button id="odd-pile" form="draw-card">
+          {{{draw-pile}}}
+        </button>
+      </section>
+    </div>
+
+    <div class="line">
+      <section class="hand">
+        <!-- non-player-hand -->
+        <div class="card back clouds"></div>
+        <div class="card back clouds"></div>
+        <div class="card back clouds"></div>
+        <div class="card back clouds"></div>
+        <div class="card back clouds"></div>
+        <div class="card back clouds"></div>
+        <div class="card back clouds"></div>
+      </section>
+
+      <section class="battleline">
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+        <div class="card back diamonds"></div>
+      </section>
+
+      <section id="player-hand" class="hand">
+      </section>
+    </div>
+
+    <div class="deck">
+      <section class="draw-pile">
+        <button id="draw-pile" form="draw-card">
+          {{{draw-pile}}}
+        </button>
+      </section>
+    </div>
+  </div>
+</body>
+
+</html>

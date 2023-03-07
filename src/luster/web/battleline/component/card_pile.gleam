@@ -2,8 +2,7 @@ import gleam/int
 import gleam/list
 import gleam/string_builder
 import luster/web/battleline/component/card_back.{Background}
-import luster/battleline.{Card, GameState}
-import luster/web/template
+import luster/battleline.{Card}
 
 pub fn render(deck: List(Card), back: Background) -> String {
   assert Ok(card_count) = int.divide(list.length(deck), 10)
@@ -11,7 +10,7 @@ pub fn render(deck: List(Card), back: Background) -> String {
   let card = card_back.render(back)
 
   string_builder.to_string({
-    use builder, _times, index <- repeat(card_count, string_builder.new())
+    use builder, _times, _index <- repeat(card_count, string_builder.new())
     string_builder.append(builder, card)
   })
 }
