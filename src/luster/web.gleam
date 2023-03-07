@@ -1,25 +1,23 @@
+//// Adds 1 new id, gamestate to the session
+
+import gleam/bit_builder.{BitBuilder}
 import gleam/map.{Map}
 import gleam/erlang/process.{Subject}
 import gleam/http.{Get, Method, Post, Put}
 import gleam/http/request
-import gleam/http/response.{Response}
-import luster/server
-import luster/server/middleware
-import luster/web/context.{Context}
+import gleam/http/response
+import luster/web/middleware
 import luster/web/arcade
-import luster/web/chat
-import luster/web/battleline.{GameState}
-import luster/web/session
-import luster/web/payload
+import luster/web/battleline
+import luster/web/battleline/context.{Context}
+import luster/session
+import luster/web/payload.{Request, Response}
 import gleam/io
-
-pub type Context {
-  Context(session: Subject(GameState))
-}
 
 pub fn service(
   request: request.Request(BitString),
-) -> repsonse.Response(BitBuilder) {
+) -> response.Response(BitBuilder) {
+  // Starts 1 instance of the session server
   assert Ok(subject) = session.start(Nil)
   let context = Context(session: subject)
 
@@ -31,26 +29,19 @@ pub fn service(
   |> middleware.to_bit_builder()
 }
 
-fn router(request: Request) -> Response {
+fn router(request: Request(Context)) -> Response {
   case request.method, request.path {
-    Get, "/" -> arcade.index()
-    Put, "/new-battleline" -> arcade.new_battleline(request.context)
-    Get, "/error-message" -> arcade.error_message(request.context)
+    //Get, [] -> arcade.index()
+    //Put, ["new-battleline"] -> arcade.new_battleline(request.context)
+    //Get, ["error-message"] -> arcade.error_message(request.context)
+    //Put, ["battleline", "new"] -> battleline.new(request, context)
+    Get, ["battleline", session_id] -> battleline.index(request, session_id)
 
-    method, _path ->
-      case method, request.path_segments(request) {
-        //Put, ["battleline", "new"] -> battleline.new(request, context)
-        Get, ["battleline", "new"] -> battleline.new(request, context)
-
-        Get, ["battleline", id] -> battleline.index(request, context, id)
-
-        Post, ["battleline", id, "draw-card"] ->
-          battleline.draw_card(request, context, id)
-
-        Get, ["battleline", "assets", ..path] -> battleline.assets(path)
-      }
-
-    _, _ -> arcade.error(request)
+    //Post, ["battleline", id, "draw-card"] ->
+    //  battleline.draw_card(request, context, id)
+    //Get, ["battleline", "assets", ..path] -> battleline.assets(path)
+    //_, _ -> arcade.error(request)
+    _, _ -> battleline.index(request, "")
   }
 }
 // Or Create a Context type with more info

@@ -1,16 +1,20 @@
+import gleam/string
+import gleam/map.{Map}
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
-import luster/server/middleware.{FormFields}
-import luster/server/mime
-import luster/server/template
+import luster/session
 import luster/battleline
+import luster/web/middleware
+import luster/web/template
+import luster/web/payload
+import luster/web/battleline/context.{Context}
 
 pub fn index() -> Response(String) {
   response.new(200)
-  |> response.prepend_header("content-type", mime.html)
+  |> response.prepend_header("content-type", "text/html; charset=utf-8")
   |> response.set_body(
-    template.new(["src", "luster", "web", "card_arcade"])
-    |> template.from(["index.html"])
+    template.new("src/luster/web/card_arcade/component")
+    |> template.from("index.html")
     |> template.render(),
   )
 }
@@ -19,9 +23,7 @@ pub fn new_battleline(context: Context) -> Response(String) {
   let id = new_id()
   let state = battleline.new_game()
 
-  assert Nil =
-    context.session
-    |> session.set(id, state)
+  assert Nil = session.set(context.session, id, state)
 
   response.new(303)
   |> response.prepend_header("location", "/battleline/" <> id)
@@ -36,7 +38,7 @@ pub fn error_message() -> Response(String) {
   todo
 }
 
-pub fn error(_: Request(FormFields)) -> Response(String) {
+pub fn error(_: Request(Map(String, String))) -> Response(String) {
   response.new(404)
   |> response.set_body("path not available")
 }

@@ -1,19 +1,22 @@
+import gleam/map.{Map}
+import gleam/http
+
 /// Abstraction to render responses in an easier way.
 pub type Request(context) {
   Request(
-    method: Method,
-    path: String,
+    method: http.Method,
+    path: List(String),
     form_data: Map(String, String),
     context: context,
   )
 }
 
 pub type Response {
-  // template can have implicit status 200
-  Render(mime: Mime, template: Template)
-  Static(mime: Mime, path: String)
+  // TODO: document could be of the `Template` type
+  Render(mime: MIME, document: String)
+  Static(mime: MIME, path: String)
   Redirect(location: String)
-  Flash(message: String, color: RGB)
+  Flash(message: String, color: String)
   NotFound(message: String)
 }
 
@@ -24,7 +27,7 @@ pub type MIME {
   TurboStream
 }
 
-fn content_type(mime: MIME) -> String {
+pub fn content_type(mime: MIME) -> String {
   case mime {
     HTML -> "text/html; charset=utf-8"
     CSS -> "text/css"

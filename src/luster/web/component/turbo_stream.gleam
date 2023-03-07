@@ -1,5 +1,5 @@
 import gleam/string_builder.{StringBuilder}
-import luster/server/template
+import luster/web/template
 
 pub type Action {
   Append
@@ -48,8 +48,8 @@ fn wrap(action: Action, target: String, content: String) -> String {
     After -> "after"
   }
 
-  template.new(["src", "luster", "web", "battleline", "component"])
-  |> template.from(["turbo_stream.html"])
+  template.new("src/luster/web/battleline/component")
+  |> template.from("turbo_stream.html")
   |> template.args(replace: "action", with: action)
   |> template.args(replace: "target", with: target)
   |> template.args(replace: "content", with: content)

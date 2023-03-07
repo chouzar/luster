@@ -1,6 +1,7 @@
 //import gleam/otp/supervisor
+import gleam/erlang/process
 import luster/battleline
-import luster/web/session
+import luster/session
 import luster/web
 import mist
 
@@ -9,6 +10,7 @@ import mist
 // Add supervision tree
 
 pub fn main() -> Nil {
+  // TODO:
   // start with supervisor, 
   // children could be inspected 
   // then passed to the service

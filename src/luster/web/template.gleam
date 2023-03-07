@@ -6,7 +6,7 @@ pub opaque type Template {
   Template(
     render: String,
     params: List(#(String, String)),
-    path: String,
+    file: String,
     base_path: String,
   )
 }
@@ -15,20 +15,19 @@ pub fn new(path: String) -> Template {
   Template(
     render: "",
     params: [],
-    path: "",
+    file: "",
     base_path: build_path([root(), path]),
   )
 }
 
-pub fn from(template: Template, path: List(String)) -> Template {
-  let path = build_path(path)
-
+pub fn from(template: Template, file: String) -> Template {
+  // TODO: Validate file exists by returning Error
   assert Ok(render) =
-    [template.base_path, path]
+    [template.base_path, file]
     |> build_path()
     |> read()
 
-  Template(..template, path: path, render: render)
+  Template(..template, file: file, render: render)
 }
 
 pub fn args(
@@ -49,6 +48,7 @@ pub fn render(template: Template) -> String {
 }
 
 fn build_path(path: List(String)) -> String {
+  // TODO: Validate that it forms a valid URI
   string.join(path, with: "/")
 }
 

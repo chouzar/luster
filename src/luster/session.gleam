@@ -2,7 +2,6 @@ import gleam/map.{Map}
 import gleam/erlang/process.{Subject}
 import gleam/otp/actor.{Continue, Next, StartError, Stop}
 import luster/battleline.{GameState}
-import gleam/io
 
 type State {
   State(sessions: Map(String, GameState))
