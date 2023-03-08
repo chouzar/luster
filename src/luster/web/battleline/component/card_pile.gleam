@@ -1,11 +1,25 @@
-import gleam/int
 import gleam/list
 import gleam/string_builder
 import luster/web/battleline/component/card_back.{Background}
 import luster/battleline.{Card}
 
 pub fn render(deck: List(Card), back: Background) -> String {
-  assert Ok(card_count) = int.divide(list.length(deck), 12)
+  let card_count = case list.length(deck) {
+    x if x > 48 -> 13
+    x if x > 44 -> 12
+    x if x > 40 -> 11
+    x if x > 36 -> 10
+    x if x > 32 -> 09
+    x if x > 28 -> 08
+    x if x > 24 -> 07
+    x if x > 20 -> 06
+    x if x > 16 -> 05
+    x if x > 12 -> 04
+    x if x > 08 -> 03
+    x if x > 04 -> 02
+    x if x > 00 -> 01
+    0 -> 0
+  }
 
   let card = card_back.render(back)
 
