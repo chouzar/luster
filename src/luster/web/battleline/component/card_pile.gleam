@@ -5,7 +5,7 @@ import luster/web/battleline/component/card_back.{Background}
 import luster/battleline.{Card}
 
 pub fn render(deck: List(Card), back: Background) -> String {
-  assert Ok(card_count) = int.divide(list.length(deck), 10)
+  assert Ok(card_count) = int.divide(list.length(deck), 12)
 
   let card = card_back.render(back)
 
