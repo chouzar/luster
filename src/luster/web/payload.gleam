@@ -21,6 +21,14 @@ pub type Response {
   NotFound(message: String)
 }
 
+// TODO:
+// Layout(source: 
+// Stream(patch: [
+//  action: "replace", key: "id", value: "Hello",
+//  action: "replace", key: "id", value: "Hello",
+//  action: "replace", key: "id", value: "Hello",
+// ])
+
 pub type MIME {
   HTML
   CSS

@@ -14,12 +14,17 @@ pub type GameState {
 }
 
 pub type Phase {
-  GameStart
   InitialDraw
-  Draw(Player)
+  ClaimFlag(Player)
   PlayCard(Player)
-  GameEnd
+  Draw(Player)
 }
+
+//fn next_phase(state: GameState) -> GameState {
+// case state.phase {
+//  InitialDraw -> 
+// } 
+//}
 
 pub type Position {
   Position(flag: Option(Player), side: Map(Player, List(Card)))
@@ -45,11 +50,11 @@ pub type Card {
 }
 
 type Formation {
-  Wedge
-  Phalanx
-  Batallion
-  Skirmish
-  Host
+  ThreeSuitsInSequence
+  ThreeOfSameRank
+  ThreeInSequence
+  ThreeSuits
+  HighCard
 }
 
 type Victory {

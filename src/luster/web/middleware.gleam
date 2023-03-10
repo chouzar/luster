@@ -8,11 +8,12 @@ import luster/web/payload
 import luster/web/template
 
 pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
+  // TODO; If request is a form, add the form data
   request.map(request, decode_uri_string)
 }
 
 fn decode_uri_string(value: BitString) -> Map(String, String) {
-  // TODO: An alternative is to use the: 
+  // An alternative is to use the: 
   // * `uri_string:dissect_query` from erlang
   // * `Plug.Conn.Query.decode` from elixir's Plug
   assert Ok(value) = bit_string.to_string(value)

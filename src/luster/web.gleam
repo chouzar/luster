@@ -15,10 +15,10 @@ import luster/session.{Message}
 import luster/web/payload.{CSS, Favicon, NotFound, Request, Response, Static}
 
 pub fn service(
-  subject: Subject(Message),
+  session_pid: Subject(Message),
 ) -> fn(request.Request(BitString)) -> response.Response(BitBuilder) {
   // Starts 1 instance of the session server
-  let context = Context(session: subject)
+  let context = Context(session: session_pid)
 
   fn(request: request.Request(BitString)) -> response.Response(BitBuilder) {
     request
@@ -62,15 +62,13 @@ fn assets(request: Request(Context)) -> Response {
 }
 
 fn error(request: Request(Context)) -> Response {
-  let message =
-    [
-      "Error: Unable to find path",
-      "Method: " <> http.method_to_string(request.method),
-      "Path: " <> request.path,
-    ]
-    |> string.join("/n")
+  [
+    "Error: Unable to find path",
+    "Method: " <> http.method_to_string(request.method),
+    "Path: " <> request.path,
+  ]
+  |> string.join("/n")
+  |> io.print()
 
-  io.print(message)
-
-  NotFound(message: message)
+  NotFound(message: "Page not found")
 }
