@@ -8,6 +8,7 @@ pub type GameState {
     phase: Phase,
     battle_line: BattleLine,
     deck: List(Card),
+    player_sequence: List(Player),
     hands: Map(Player, List(Card)),
   )
 }
@@ -28,8 +29,8 @@ type BattleLine =
   Map(Int, Position)
 
 pub type Player {
-  Macedon
-  Persia
+  Player(id: String)
+  Computer
 }
 
 pub type Suit {
@@ -56,22 +57,23 @@ type Victory {
   Envelopment
 }
 
-pub fn new_game() -> GameState {
+pub fn new_game(p1 p1: Player, p2 p2: Player) -> GameState {
   GameState(
-    phase: GameStart,
-    battle_line: new_battle_line(),
+    phase: InitialDraw,
+    battle_line: new_battle_line(p1, p2),
     deck: new_deck(),
-    hands: new_hands(),
+    player_sequence: list.shuffle([p1, p2]),
+    hands: new_hands(p1, p2),
   )
 }
 
-fn new_battle_line() -> BattleLine {
+fn new_battle_line(p1: Player, p2: Player) -> BattleLine {
   let position =
     Position(
       flag: None,
       side: map.new()
-      |> map.insert(Macedon, [])
-      |> map.insert(Persia, []),
+      |> map.insert(p1, [])
+      |> map.insert(p2, []),
     )
 
   use map, index <- list.fold(list.range(1, 9), map.new())
@@ -86,10 +88,10 @@ fn new_deck() -> List(Card) {
   })
 }
 
-fn new_hands() -> Map(Player, List(Card)) {
+fn new_hands(p1: Player, p2: Player) -> Map(Player, List(Card)) {
   map.new()
-  |> map.insert(Macedon, [])
-  |> map.insert(Persia, [])
+  |> map.insert(p1, [])
+  |> map.insert(p2, [])
 }
 
 pub fn draw_card(state: GameState, for player: Player) -> #(Card, GameState) {
@@ -101,12 +103,8 @@ pub fn draw_card(state: GameState, for player: Player) -> #(Card, GameState) {
   #(card, GameState(..state, deck: deck, hands: hands))
 }
 
-fn random_player() -> Player {
-  assert Ok(player) =
-    [Macedon, Persia]
-    |> list.shuffle()
-    |> list.first()
-
+pub fn current_player(state: GameState) -> Player {
+  let [player, ..] = state.player_sequence
   player
 }
 
