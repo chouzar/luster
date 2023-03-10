@@ -4,7 +4,7 @@ import luster/id
 import luster/battleline
 import luster/web/template
 import luster/web/context.{Context}
-import luster/web/payload.{HTML, Redirect, Render, Request, Response}
+import luster/web/payload.{HTML, Redirect, Render, Response}
 
 pub fn index() -> Response {
   Render(
@@ -15,13 +15,13 @@ pub fn index() -> Response {
   )
 }
 
-pub fn new_battleline(request: Request(Context)) -> Response {
+pub fn new_battleline(context: Context) -> Response {
   let p1 = battleline.Player(id.triplet())
   let p2 = battleline.Computer
   let state = battleline.new_game(p1, p2)
 
   let id = id.triplet()
-  assert Nil = session.set(request.context.session, id, state)
+  assert Nil = session.set(context.session_pid, id, state)
 
   Redirect(location: "/battleline/" <> id)
 }

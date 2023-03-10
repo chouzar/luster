@@ -2,13 +2,12 @@ import gleam/map.{Map}
 import gleam/http
 
 /// Abstraction to render responses in an easier way.
-pub type Request(context) {
+pub type Request {
   Request(
     method: http.Method,
     path: String,
     path_segments: List(String),
     form_data: Map(String, String),
-    context: context,
   )
 }
 

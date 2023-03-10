@@ -14,13 +14,17 @@ import luster/web/battleline/component/card_front
 import luster/web/battleline/component/card_back
 import luster/web/battleline/component/card_pile
 
-pub type Parameters {
-  // TODO: 
-  // Param decoding should happen in this module
-  // Maybe only return gamestate and let the engine render
-  Index(state: GameState, session_id: String, player_id: String)
-  DrawCard(state: GameState, session_id: String, player_id: String)
-}
+//pub type Action {
+//  // TODO: 
+//  // Param decoding should happen in this module
+//  // Maybe only return gamestate and let the engine render
+//  //Show(
+//  //  session_pid: Subject(session.Message),
+//  //  session_id: String,
+//  //  player_id: String,
+//  //)
+//  //DrawCard(state: GameState, session_id: String, player_id: String)
+//}
 
 // TODO:
 // should only return gamestate?
@@ -32,8 +36,8 @@ pub type Parameters {
 // Modify state
 // Build templates
 // Render
-pub fn index(request: Request(Context), session_id: String) -> Response {
-  let state = session.get(request.context.session, session_id)
+pub fn index(context: Context, session_id: String) -> Response {
+  let state = session.get(context.session_pid, session_id)
 
   assert Player(player_id) = battleline.current_player(state)
 
@@ -54,15 +58,20 @@ pub fn index(request: Request(Context), session_id: String) -> Response {
   )
 }
 
-pub fn draw_card(request: Request(Context), session_id: String) -> Response {
+pub fn draw_card(
+  request: Request,
+  context: Context,
+  session_id: String,
+) -> Response {
   let Request(form_data: form, ..) = request
+  let Context(session_pid: session_pid) = context
 
   case validate(form, ["player-id"]) {
     Ok([player_id]) -> {
-      let state = session.get(request.context.session, session_id)
+      let state = session.get(session_pid, session_id)
       let #(card, state) = battleline.draw_card(state, for: Player(player_id))
 
-      assert Nil = session.set(request.context.session, session_id, state)
+      assert Nil = session.set(context.session_pid, session_id, state)
 
       let odd_pile = card_pile.render(state.deck, card_back.Diamonds)
       let draw_pile = card_pile.render(state.deck, card_back.Clouds)

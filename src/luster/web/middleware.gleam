@@ -21,16 +21,12 @@ fn decode_uri_string(value: BitString) -> Map(String, String) {
   map.from_list(params)
 }
 
-pub fn from_mist_request(
-  req: Request(Map(String, String)),
-  context: context,
-) -> payload.Request(context) {
+pub fn from_mist_request(req: Request(Map(String, String))) -> payload.Request {
   payload.Request(
     method: req.method,
     path: req.path,
     path_segments: request.path_segments(req),
     form_data: req.body,
-    context: context,
   )
 }
 
