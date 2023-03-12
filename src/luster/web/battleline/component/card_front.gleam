@@ -4,11 +4,11 @@ import gleam/string
 import gleam/list
 import gleam/string_builder
 import gleam/option.{None, Option, Some}
-import luster/web/template
+import luster/web/template.{Template}
 import luster/battleline.{Card, Club, Diamond, Heart, Spade}
 import gleam/bbmustache.{CompileError}
 
-pub fn render(card: Card) -> Result(String, CompileError) {
+pub fn render(card: Card) -> Template {
   let suit = case card.suit {
     Spade -> "♠"
     Heart -> "♥"
@@ -29,5 +29,4 @@ pub fn render(card: Card) -> Result(String, CompileError) {
   |> template.args(replace: "suit", with: suit)
   |> template.args(replace: "rank", with: rank)
   |> template.args(replace: "color", with: color)
-  |> template.render()
 }
