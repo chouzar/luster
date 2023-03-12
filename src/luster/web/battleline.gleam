@@ -4,11 +4,14 @@ import gleam/map.{Map}
 import gleam/string
 import gleam/http
 import gleam/io
-import luster/session
+import gleam/erlang/process.{Subject}
+import luster/session.{Message}
 import luster/battleline.{GameState, Player}
-import luster/web/payload.{Flash, HTML, Render, Request, Response, TurboStream}
+import luster/web/payload.{
+  Flash, HTML, Render, Request, Response, Stream, TurboStream,
+}
 import luster/web/component/turbo_stream.{Append, Update}
-import luster/web/context.{Context}
+import luster/web/component/stream
 import luster/web/template
 import luster/web/battleline/component/card_front
 import luster/web/battleline/component/card_back
@@ -36,70 +39,56 @@ import luster/web/battleline/component/card_pile
 // Modify state
 // Build templates
 // Render
-pub fn index(context: Context, session_id: String) -> Response {
-  let state = session.get(context.session_pid, session_id)
 
-  assert Player(player_id) = battleline.current_player(state)
+pub fn mount(
+  _request: Request,
+  session_pid: Subject(Message),
+  session_id: String,
+  player_id: String,
+) -> Response {
+  let state = session.get(session_pid, session_id)
 
-  let odd_pile = card_pile.render(state.deck, card_back.Diamonds)
-  let draw_pile = card_pile.render(state.deck, card_back.Clouds)
+  // This could be computed by the template module
+  // Would also be useful to have another keyword
+  // template.embed
+  // template.add
+  assert Ok(odd_pile) = card_pile.render(state.deck, card_back.Diamonds)
+  assert Ok(draw_pile) = card_pile.render(state.deck, card_back.Clouds)
   // TODO: Being able to compose the template, with the ideas behind turbo_stream
   // * Both could be structural composed at the end
   // * Or just do a single `component` that can be embedded.
   Render(
     mime: HTML,
-    document: template.new("src/luster/web/battleline/template")
-    |> template.from("layout.html")
+    document: template.new("src/luster/web/battleline/template/layout.html")
     |> template.args(replace: "odd-pile", with: odd_pile)
     |> template.args(replace: "draw-pile", with: draw_pile)
     |> template.args(replace: "session-id", with: session_id)
-    |> template.args(replace: "player-id", with: player_id)
-    |> template.render(),
+    // TODO: This one going to be removed, no need for player_id
+    |> template.args(replace: "player-id", with: player_id),
   )
 }
 
 pub fn draw_card(
-  request: Request,
-  context: Context,
+  _request: Request,
+  session_pid: Subject(Message),
   session_id: String,
+  player_id: String,
 ) -> Response {
-  let Request(form_data: form, ..) = request
-  let Context(session_pid: session_pid) = context
+  let state = session.get(session_pid, session_id)
+  let #(card, state) = battleline.draw_card(state, for: Player(player_id))
 
-  case validate(form, ["player-id"]) {
-    Ok([player_id]) -> {
-      let state = session.get(session_pid, session_id)
-      let #(card, state) = battleline.draw_card(state, for: Player(player_id))
+  assert Nil = session.set(session_pid, session_id, state)
 
-      assert Nil = session.set(context.session_pid, session_id, state)
+  assert Ok(odd_pile) = card_pile.render(state.deck, card_back.Diamonds)
+  assert Ok(draw_pile) = card_pile.render(state.deck, card_back.Clouds)
+  assert Ok(card) = card_front.render(card)
 
-      let odd_pile = card_pile.render(state.deck, card_back.Diamonds)
-      let draw_pile = card_pile.render(state.deck, card_back.Clouds)
-      let card = card_front.render(card)
-
-      Render(
-        mime: TurboStream,
-        document: turbo_stream.new()
-        |> turbo_stream.add(odd_pile, do: Update, at: "odd-pile")
-        |> turbo_stream.add(draw_pile, do: Update, at: "draw-pile")
-        |> turbo_stream.add(card, do: Append, at: "player-hand")
-        |> turbo_stream.render(),
-      )
-    }
-
-    Error(_) -> {
-      [
-        "Error: Invalid action",
-        "Method: " <> http.method_to_string(request.method),
-        "Path: " <> request.path,
-        "Data: Key" <> " key " <> "not found",
-      ]
-      |> string.join("/n")
-      |> io.print()
-
-      Flash("Invalid action", "#080808")
-    }
-  }
+  Stream(
+    document: stream.new()
+    |> stream.add(odd_pile, do: Update, at: "odd-pile")
+    |> stream.add(draw_pile, do: Update, at: "draw-pile")
+    |> stream.add(card, do: Append, at: "player-hand"),
+  )
 }
 
 // TODO: Build a validator module for maps

@@ -7,24 +7,26 @@ import gleam/string
 import gleam/http.{Get, Post}
 import gleam/http/request
 import gleam/http/response
+import luster/util
 import luster/web/middleware
 import luster/web/arcade
 import luster/web/battleline
-import luster/web/context.{Context}
+import luster/web/context
 import luster/session.{Message}
-import luster/web/payload.{CSS, Favicon, NotFound, Request, Response, Static}
+import luster/web/payload.{
+  CSS, Favicon, Flash, NotFound, Request, Response, Static,
+}
 
 pub fn service(
   session_pid: Subject(Message),
 ) -> fn(request.Request(BitString)) -> response.Response(BitBuilder) {
   // Starts 1 instance of the session server
-  let context = Context(session_pid: session_pid)
 
   fn(request: request.Request(BitString)) -> response.Response(BitBuilder) {
     request
     |> middleware.process_form()
     |> middleware.from_mist_request()
-    |> router(context)
+    |> router(session_pid)
     |> middleware.into_mist_response()
     |> middleware.to_bit_builder()
   }
@@ -32,45 +34,66 @@ pub fn service(
 
 // TODO: Eventually eliminate all `Request` data passed to controllers
 // or eventually add everything to `Request` so we can get request -> resposne controllers
-fn router(request: Request, context: Context) -> Response {
-  case request.method, request.path_segments {
-    Get, [] -> arcade.index()
-    Post, ["new-battleline"] -> arcade.new_battleline(context)
-    Get, ["battleline", session_id] -> battleline.index(context, session_id)
+fn router(request: Request, session_pid: Subject(session.Message)) -> Response {
+  let player_id = "Raúl"
+  let flash_error = fn(message) { flash(request, message, "red") }
+
+  case request.method, request.path {
+    Get, [] ->
+      request
+      |> arcade.index()
+
+    Post, ["new-battleline"] ->
+      request
+      |> arcade.new_battleline(session_pid, player_id)
+
+    Get, ["battleline", session_id] ->
+      request
+      |> battleline.mount(session_pid, session_id, player_id)
+
     Post, ["battleline", session_id, "draw-card"] ->
-      battleline.draw_card(request, context, session_id)
-    Get, ["assets", ..] -> assets(request)
-    _, _ -> error(request)
+      request
+      |> battleline.draw_card(session_pid, session_id, player_id)
+
+    Get, ["assets", ..] ->
+      request
+      |> assets()
+
+    _, _ -> {
+      util.report([
+        "Error: Unable to find path",
+        "Method: " <> http.method_to_string(request.method),
+        "Path: " <> request.static_path,
+      ])
+
+      NotFound(message: "Page not found")
+    }
   }
 }
 
 fn assets(request: Request) -> Response {
   // TODO: Find a generic way to do this.
-  case request.path {
+  case request.static_path {
     "/assets/battleline/styles.css" ->
-      Static(
-        mime: CSS,
-        path: "/src/luster/web/battleline/assets",
-        file: "styles.css",
-      )
+      Static(mime: CSS, path: "/src/luster/web/battleline/assets/styles.css")
 
     "/assets/battleline/favicon.ico" ->
       Static(
         mime: Favicon,
-        path: "/src/luster/web/battleline/assets",
-        file: "favicon.ico",
+        path: "/src/luster/web/battleline/assets/favicon.ico",
       )
   }
 }
 
-fn error(request: Request) -> Response {
+fn flash(request: Request, message: String, color: String) -> Response {
   [
-    "Error: Unable to find path",
+    "Error: Invalid action",
     "Method: " <> http.method_to_string(request.method),
-    "Path: " <> request.path,
+    "Path: " <> request.static_path,
+    "Data: Key" <> " key " <> "not found",
   ]
   |> string.join("/n")
   |> io.print()
 
-  NotFound(message: "Page not found")
+  Flash("Invalid action", "#080808")
 }

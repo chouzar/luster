@@ -11,8 +11,7 @@ pub fn render(back: Background) {
     Diamonds -> "diamonds"
   }
 
-  template.new("src/luster/web/battleline/component")
-  |> template.from("card_back.html")
+  template.new("src/luster/web/battleline/component/card_back.html")
   |> template.args(replace: "background", with: background)
   |> template.render()
 }

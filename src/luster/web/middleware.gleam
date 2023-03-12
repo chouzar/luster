@@ -6,6 +6,8 @@ import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import luster/web/payload
 import luster/web/template
+import luster/web/component/stream
+import luster/web/context
 
 pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
   // TODO; If request is a form, add the form data
@@ -24,43 +26,75 @@ fn decode_uri_string(value: BitString) -> Map(String, String) {
 pub fn from_mist_request(req: Request(Map(String, String))) -> payload.Request {
   payload.Request(
     method: req.method,
-    path: req.path,
-    path_segments: request.path_segments(req),
+    static_path: req.path,
+    path: request.path_segments(req),
     form_data: req.body,
+    context: context.None,
   )
 }
 
 pub fn into_mist_response(resp: payload.Response) -> Response(String) {
   case resp {
     payload.Render(mime, templ) ->
-      response.new(200)
-      |> response.prepend_header("content-type", payload.content_type(mime))
-      |> response.set_body(templ)
+      case template.render(templ) {
+        Ok(document) ->
+          response.new(200)
+          |> response.prepend_header("content-type", content_type(mime))
+          |> response.set_body(document)
 
-    payload.Static(mime, path, file) ->
-      response.new(200)
-      |> response.prepend_header("content-type", payload.content_type(mime))
-      |> response.set_body(
+        Error(_) ->
+          response.new(404)
+          |> response.set_body("Error rendering component")
+      }
+
+    payload.Stream(str) ->
+      case stream.render(str) {
+        Ok(document) ->
+          response.new(200)
+          |> response.prepend_header(
+            "content-type",
+            content_type(payload.TurboStream),
+          )
+          |> response.set_body(document)
+
+        Error(_) ->
+          response.new(404)
+          |> response.set_body("Error rendering component")
+      }
+
+    payload.Static(mime, path) ->
+      case
         template.new(path)
-        |> template.from(file)
-        |> template.render(),
-      )
+        |> template.render()
+      {
+        Ok(document) ->
+          response.new(200)
+          |> response.prepend_header("content-type", content_type(mime))
+          |> response.set_body(document)
+
+        Error(_) ->
+          response.new(404)
+          |> response.set_body("Resource not found")
+      }
 
     payload.Redirect(location: path) ->
       response.new(303)
       |> response.prepend_header("location", path)
 
     payload.Flash(message, color) ->
-      response.new(200)
-      |> response.prepend_header(
-        "content-type",
-        payload.content_type(payload.HTML),
-      )
-      |> response.set_body(
-        template.new("src/luster/web/component")
-        |> template.from("flash.html")
-        |> template.render(),
-      )
+      case
+        template.new("src/luster/web/component/flash.html")
+        |> template.render()
+      {
+        Ok(document) ->
+          response.new(200)
+          |> response.prepend_header("content-type", content_type(payload.HTML))
+          |> response.set_body(document)
+
+        Error(_) ->
+          response.new(404)
+          |> response.set_body("Flash not found")
+      }
 
     payload.NotFound(message) ->
       response.new(404)
@@ -70,4 +104,13 @@ pub fn into_mist_response(resp: payload.Response) -> Response(String) {
 
 pub fn to_bit_builder(resp: Response(String)) -> Response(BitBuilder) {
   response.map(resp, bit_builder.from_string)
+}
+
+fn content_type(mime: payload.MIME) -> String {
+  case mime {
+    payload.HTML -> "text/html; charset=utf-8"
+    payload.CSS -> "text/css"
+    payload.Favicon -> "image/x-icon"
+    payload.TurboStream -> "text/vnd.turbo-stream.html; charset=utf-8"
+  }
 }

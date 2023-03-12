@@ -20,6 +20,36 @@ pub type Phase {
   Draw(Player)
 }
 
+const max_hand_size = 7
+
+fn next_phase(state: GameState) -> GameState {
+  // TODO: This shouldn't change state only the phase
+  // Maybe operate at the phase level to avoid issues
+  let GameState(player_sequence: players, hands: hands, ..) = state
+
+  let next_phase: Phase = case state.phase {
+    InitialDraw ->
+      case
+        players
+        |> list.map(fn(player) {
+          hands
+          |> map.get(player)
+          |> result.unwrap([])
+        })
+        |> list.all(fn(hand) { list.length(hand) == max_hand_size })
+      {
+        True -> ClaimFlag(current_player(state))
+        False -> InitialDraw
+      }
+
+    ClaimFlag(player) -> todo
+    PlayCard(player) -> todo
+    Draw(player) -> todo
+  }
+
+  GameState(..state, phase: next_phase)
+}
+
 //fn next_phase(state: GameState) -> GameState {
 // case state.phase {
 //  InitialDraw -> 
@@ -99,6 +129,10 @@ fn new_hands(p1: Player, p2: Player) -> Map(Player, List(Card)) {
   |> map.insert(p2, [])
 }
 
+// TODO: There's a draw card where the player can be deducted from 
+// the gamestate. 
+//
+// There's this one which depends on the session.
 pub fn draw_card(state: GameState, for player: Player) -> #(Card, GameState) {
   let [card, ..deck] = state.deck
 
@@ -108,13 +142,21 @@ pub fn draw_card(state: GameState, for player: Player) -> #(Card, GameState) {
   #(card, GameState(..state, deck: deck, hands: hands))
 }
 
+fn claim_flag(state: GameState, for player: Player) -> GameState {
+  todo
+}
+
+fn play_card(
+  state: GameState,
+  for player: Player,
+  at position: Int,
+) -> GameState {
+  todo
+}
+
 pub fn current_player(state: GameState) -> Player {
   let [player, ..] = state.player_sequence
   player
-}
-
-fn play_card(line: BattleLine, card: Card, index: Int) -> BattleLine {
-  todo
 }
 
 fn new_card(rank: Int, suit: Suit) -> Card {

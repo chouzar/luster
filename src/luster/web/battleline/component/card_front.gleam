@@ -6,8 +6,9 @@ import gleam/string_builder
 import gleam/option.{None, Option, Some}
 import luster/web/template
 import luster/battleline.{Card, Club, Diamond, Heart, Spade}
+import gleam/bbmustache.{CompileError}
 
-pub fn render(card: Card) -> String {
+pub fn render(card: Card) -> Result(String, CompileError) {
   let suit = case card.suit {
     Spade -> "♠"
     Heart -> "♥"
@@ -24,8 +25,7 @@ pub fn render(card: Card) -> String {
 
   let rank = int.to_string(card.rank)
 
-  template.new("src/luster/web/battleline/component")
-  |> template.from("card_front.html")
+  template.new("src/luster/web/battleline/component/card_front.html")
   |> template.args(replace: "suit", with: suit)
   |> template.args(replace: "rank", with: rank)
   |> template.args(replace: "color", with: color)

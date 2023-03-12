@@ -1,9 +1,14 @@
+import gleam/result
 import gleam/list
 import gleam/string_builder
 import luster/web/battleline/component/card_back.{Background}
 import luster/battleline.{Card}
+import gleam/bbmustache.{CompileError}
 
-pub fn render(deck: List(Card), back: Background) -> String {
+pub fn render(
+  deck: List(Card),
+  back: Background,
+) -> Result(String, CompileError) {
   let card_count = case list.length(deck) {
     x if x > 48 -> 13
     x if x > 44 -> 12
@@ -21,11 +26,12 @@ pub fn render(deck: List(Card), back: Background) -> String {
     0 -> 0
   }
 
-  let card = card_back.render(back)
-
-  string_builder.to_string({
-    use builder, _times, _index <- repeat(card_count, string_builder.new())
-    string_builder.append(builder, card)
+  card_back.render(back)
+  |> result.map(fn(card) {
+    string_builder.to_string({
+      use builder, _times, _index <- repeat(card_count, string_builder.new())
+      string_builder.append(builder, card)
+    })
   })
 }
 
