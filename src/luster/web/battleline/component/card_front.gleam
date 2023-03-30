@@ -1,6 +1,6 @@
 import gleam/int
-import luster/battleline.{Card, Club, Diamond, GameState, Heart, Spade}
-import luster/web/lay.{Layout, Many, Raw, Template}
+import luster/battleline.{Card, Club, Diamond, Heart, Spade}
+import luster/web/lay.{Layout, Raw, Template}
 
 pub fn new(card: Card) -> Template {
   let suit = case card.suit {

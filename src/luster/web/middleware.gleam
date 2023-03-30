@@ -82,7 +82,7 @@ pub fn into_mist_response(resp: payload.Response) -> Response(String) {
       response.new(303)
       |> response.prepend_header("location", path)
 
-    payload.Flash(message, color) ->
+    payload.Flash(_message, _color) ->
       case
         Layout(path: "src/luster/web/component/flash.html", contents: [])
         |> lay.render()

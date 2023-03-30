@@ -1,4 +1,4 @@
-import luster/web/lay.{Layout, Many, Raw, Template}
+import luster/web/lay.{Layout, Raw, Template}
 
 pub type Background {
   Clouds
