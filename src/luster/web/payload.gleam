@@ -1,8 +1,7 @@
 import gleam/map.{Map}
 import gleam/http
 import luster/web/context.{Context}
-import luster/web/template.{Template}
-import luster/web/component/stream.{Stream}
+import luster/web/lay.{Template}
 
 /// Abstraction to render responses in an easier way.
 pub type Request {
@@ -16,9 +15,11 @@ pub type Request {
 }
 
 pub type Response {
+
   // TODO: document could be of the `Template` type
+  // TODO: Render and Stream should be the same but with more control on response header
   Render(mime: MIME, document: Template)
-  Stream(document: Stream)
+  Stream(document: Template)
   Static(mime: MIME, path: String)
   Redirect(location: String)
   Flash(message: String, color: String)

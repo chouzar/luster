@@ -1,17 +1,18 @@
-import luster/web/template
+import luster/web/lay.{Layout, Many, Raw, Template}
 
 pub type Background {
   Clouds
   Diamonds
 }
 
-pub fn render(back: Background) {
+pub fn new(back: Background) -> Template {
   let background = case back {
     Clouds -> "clouds"
     Diamonds -> "diamonds"
   }
 
-  template.new("src/luster/web/battleline/component/card_back.html")
-  |> template.args(replace: "background", with: background)
-  |> template.render()
+  Layout(
+    path: "src/luster/web/battleline/component/card_back.html",
+    contents: [#("background", Raw(background))],
+  )
 }

@@ -5,9 +5,8 @@ import gleam/uri
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import luster/web/payload
-import luster/web/template
-import luster/web/component/stream
 import luster/web/context
+import luster/web/lay.{Layout}
 
 pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
   // TODO; If request is a form, add the form data
@@ -33,10 +32,12 @@ pub fn from_mist_request(req: Request(Map(String, String))) -> payload.Request {
   )
 }
 
+// TODO: Move a lot of this logic to the payload type
+// TODO: separate payload type into request/response
 pub fn into_mist_response(resp: payload.Response) -> Response(String) {
   case resp {
     payload.Render(mime, templ) ->
-      case template.render(templ) {
+      case lay.render(templ) {
         Ok(document) ->
           response.new(200)
           |> response.prepend_header("content-type", content_type(mime))
@@ -47,8 +48,8 @@ pub fn into_mist_response(resp: payload.Response) -> Response(String) {
           |> response.set_body("Error rendering component")
       }
 
-    payload.Stream(str) ->
-      case stream.render(str) {
+    payload.Stream(templ) ->
+      case lay.render(templ) {
         Ok(document) ->
           response.new(200)
           |> response.prepend_header(
@@ -64,8 +65,8 @@ pub fn into_mist_response(resp: payload.Response) -> Response(String) {
 
     payload.Static(mime, path) ->
       case
-        template.new(path)
-        |> template.render()
+        Layout(path: path, contents: [])
+        |> lay.render()
       {
         Ok(document) ->
           response.new(200)
@@ -83,8 +84,8 @@ pub fn into_mist_response(resp: payload.Response) -> Response(String) {
 
     payload.Flash(message, color) ->
       case
-        template.new("src/luster/web/component/flash.html")
-        |> template.render()
+        Layout(path: "src/luster/web/component/flash.html", contents: [])
+        |> lay.render()
       {
         Ok(document) ->
           response.new(200)

@@ -4,7 +4,7 @@ import gleam/io
 pub fn report(arguments: List(String)) -> Nil {
   arguments
   |> string.join("\n")
-  |> string.append("\n")
+  |> string.append("\n\n")
   |> io.print()
 }
 

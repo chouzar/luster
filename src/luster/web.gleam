@@ -11,7 +11,6 @@ import luster/util
 import luster/web/middleware
 import luster/web/arcade
 import luster/web/battleline
-import luster/web/context
 import luster/session.{Message}
 import luster/web/payload.{
   CSS, Favicon, Flash, NotFound, Request, Response, Static,
@@ -36,7 +35,7 @@ pub fn service(
 // or eventually add everything to `Request` so we can get request -> resposne controllers
 fn router(request: Request, session_pid: Subject(session.Message)) -> Response {
   let player_id = "Raúl"
-  let flash_error = fn(message) { flash(request, message, "red") }
+  let _flash_error = fn(message) { flash(request, message, "red") }
 
   case request.method, request.path {
     Get, [] ->
@@ -95,5 +94,19 @@ fn flash(request: Request, message: String, color: String) -> Response {
   |> string.join("/n")
   |> io.print()
 
-  Flash("Invalid action", "#080808")
+  Flash(message, color)
 }
+// TODO: Build a validator module for maps
+// x-spec
+// Can be changeset like and based on predicates >-> Accumulates result errors
+// If everything passes
+// A last parameter could be used to map into a constructor record >-> Accumulates
+//   This last parameter could be validated at compile time by using the dynamic type
+//fn validate(
+//  form: Map(String, String),
+//  keys: List(String),
+//) -> Result(List(String), Nil) {
+//  keys
+//  |> list.map(fn(key) { map.get(form, key) })
+//  |> result.all()
+//}

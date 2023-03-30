@@ -1,9 +1,3 @@
-import gleam/result
-import gleam/list
-import gleam/map.{Map}
-import gleam/string
-import gleam/http
-import gleam/io
 import gleam/erlang/process.{Subject}
 import luster/session.{Message}
 import luster/battleline.{GameState, Player}
@@ -11,11 +5,10 @@ import luster/web/payload.{
   Flash, HTML, Render, Request, Response, Stream, TurboStream,
 }
 import luster/web/component/turbo_stream.{Append, Update}
-import luster/web/component/stream
-import luster/web/template
+import luster/web/lay.{Layout, Many, Raw, Template}
 import luster/web/battleline/component/card_front
-import luster/web/battleline/component/card_back
-import luster/web/battleline/component/card_pile
+import luster/web/battleline/component/card_back.{Clouds, Diamonds}
+import luster/web/battleline/component/draw_deck
 
 //pub type Action {
 //  // TODO: 
@@ -44,27 +37,21 @@ pub fn mount(
   _request: Request,
   session_pid: Subject(Message),
   session_id: String,
-  player_id: String,
+  _player_id: String,
 ) -> Response {
   let state = session.get(session_pid, session_id)
 
-  // This could be computed by the template module
-  // Would also be useful to have another keyword
-  // template.embed
-  // template.add
-  assert Ok(odd_pile) = card_pile.render(state.deck, card_back.Diamonds)
-  assert Ok(draw_pile) = card_pile.render(state.deck, card_back.Clouds)
-  // TODO: Being able to compose the template, with the ideas behind turbo_stream
-  // * Both could be structural composed at the end
-  // * Or just do a single `component` that can be embedded.
+  // TODO: Maybe the `payload.Render` type is redundant
   Render(
     mime: HTML,
-    document: template.new("src/luster/web/battleline/template/layout.html")
-    |> template.args(replace: "odd-pile", with: odd_pile)
-    |> template.args(replace: "draw-pile", with: draw_pile)
-    |> template.args(replace: "session-id", with: session_id)
-    // TODO: This one going to be removed, no need for player_id
-    |> template.args(replace: "player-id", with: player_id),
+    document: Layout(
+      path: "src/luster/web/battleline/component/layout.html",
+      contents: [
+        #("session-id", Raw(session_id)),
+        #("odd-pile", draw_deck.new(card_back.Clouds, state.deck)),
+        #("draw-pile", draw_deck.new(card_back.Diamonds, state.deck)),
+      ],
+    ),
   )
 }
 
@@ -79,29 +66,18 @@ pub fn draw_card(
 
   assert Nil = session.set(session_pid, session_id, state)
 
-  assert Ok(odd_pile) = card_pile.render(state.deck, card_back.Diamonds)
-  assert Ok(draw_pile) = card_pile.render(state.deck, card_back.Clouds)
-  assert Ok(card) = card_front.render(card)
-
-  Stream(
-    document: stream.new()
-    |> stream.add(odd_pile, do: Update, at: "odd-pile")
-    |> stream.add(draw_pile, do: Update, at: "draw-pile")
-    |> stream.add(card, do: Append, at: "player-hand"),
-  )
-}
-
-// TODO: Build a validator module for maps
-// x-spec
-// Can be changeset like and based on predicates >-> Accumulates result errors
-// If everything passes
-// A last parameter could be used to map into a constructor record >-> Accumulates
-//   This last parameter could be validated at compile time by using the dynamic type
-fn validate(
-  form: Map(String, String),
-  keys: List(String),
-) -> Result(List(String), Nil) {
-  keys
-  |> list.map(fn(key) { map.get(form, key) })
-  |> result.all()
+  // TODO: Maybe the `payload.Stream` type is redundant
+  Stream(document: Many([
+    turbo_stream.new(at: "player-hand", do: Append, with: card_front.new(card)),
+    turbo_stream.new(
+      at: "odd-pile",
+      do: Update,
+      with: draw_deck.new(card_back.Clouds, state.deck),
+    ),
+    turbo_stream.new(
+      at: "draw-pile",
+      do: Update,
+      with: draw_deck.new(card_back.Diamonds, state.deck),
+    ),
+  ]))
 }

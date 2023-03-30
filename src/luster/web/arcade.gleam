@@ -1,17 +1,17 @@
-import gleam/map.{Map}
 import gleam/erlang/process.{Subject}
 import luster/util
 import luster/session.{Message}
 import luster/battleline
-import luster/web/template
-import luster/web/context.{Context}
+import luster/web/lay.{Layout}
 import luster/web/payload.{HTML, Redirect, Render, Request, Response}
-import gleam/bbmustache.{CompileError}
 
 pub fn index(_request: Request) -> Response {
   Render(
     mime: HTML,
-    document: template.new("src/luster/web/arcade/component/index.html"),
+    document: Layout(
+      path: "src/luster/web/arcade/component/index.html",
+      contents: [],
+    ),
   )
 }
 

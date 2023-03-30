@@ -1,6 +1,6 @@
 import gleam/string_builder.{StringBuilder}
 import gleam/bbmustache.{CompileError}
-import luster/web/template
+import luster/web/lay.{Layout, Raw, Template}
 
 pub type Action {
   Append
@@ -12,11 +12,11 @@ pub type Action {
   After
 }
 
-pub fn render(
-  action: Action,
-  target: String,
-  content: String,
-) -> Result(String, CompileError) {
+pub fn new(
+  do action: Action,
+  at target: String,
+  with content: Template,
+) -> Template {
   let action = case action {
     Append -> "append"
     Prepend -> "prepend"
@@ -27,9 +27,12 @@ pub fn render(
     After -> "after"
   }
 
-  template.new("src/luster/web/component/turbo_stream.html")
-  |> template.args(replace: "action", with: action)
-  |> template.args(replace: "target", with: target)
-  |> template.args(replace: "content", with: content)
-  |> template.render()
+  Layout(
+    path: "src/luster/web/component/turbo_stream.html",
+    contents: [
+      #("action", Raw(action)),
+      #("target", Raw(target)),
+      #("content", content),
+    ],
+  )
 }
