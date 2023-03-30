@@ -25,7 +25,7 @@ pub fn new_battleline(
   let state = battleline.new_game(p1, p2)
 
   let id = util.proquint_triplet()
-  assert Nil = session.set(session_pid, id, state)
+  let assert Nil = session.set(session_pid, id, state)
 
   Redirect(location: "/battleline/" <> id)
 }

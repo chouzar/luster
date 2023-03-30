@@ -42,7 +42,7 @@ fn handle(message: Message, state: State) -> Next(State) {
       |> Continue()
 
     GetSession(caller, id) -> {
-      assert Ok(session) = map.get(state.sessions, id)
+      let assert Ok(session) = map.get(state.sessions, id)
       let Nil = actor.send(caller, session)
       Continue(state)
     }

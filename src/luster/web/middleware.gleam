@@ -17,8 +17,8 @@ fn decode_uri_string(value: BitString) -> Map(String, String) {
   // An alternative is to use the: 
   // * `uri_string:dissect_query` from erlang
   // * `Plug.Conn.Query.decode` from elixir's Plug
-  assert Ok(value) = bit_string.to_string(value)
-  assert Ok(params) = uri.parse_query(value)
+  let assert Ok(value) = bit_string.to_string(value)
+  let assert Ok(params) = uri.parse_query(value)
   map.from_list(params)
 }
 

@@ -20,9 +20,9 @@ pub fn main() -> Nil {
   //  })
 
   // Starts 1 instance of the session server
-  assert Ok(session) = session.start(Nil)
+  let assert Ok(session) = session.start(Nil)
 
-  assert Ok(Nil) =
+  let assert Ok(Nil) =
     mist.run_service(8088, web.service(session), max_body_limit: 400_000)
   process.sleep_forever()
 }

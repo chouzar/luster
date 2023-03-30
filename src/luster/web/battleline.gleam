@@ -64,7 +64,7 @@ pub fn draw_card(
   let state = session.get(session_pid, session_id)
   let #(card, state) = battleline.draw_card(state, for: Player(player_id))
 
-  assert Nil = session.set(session_pid, session_id, state)
+  let assert Nil = session.set(session_pid, session_id, state)
 
   // TODO: Maybe the `payload.Stream` type is redundant
   Stream(document: Many([

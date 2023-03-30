@@ -28,7 +28,7 @@ pub fn render(template: Template) -> Result(String, String) {
 }
 
 fn render_layout(template: Template) -> Result(String, String) {
-  assert Layout(path: path, contents: contents) = template
+  let assert Layout(path: path, contents: contents) = template
 
   let base_path = util.root_path()
 
@@ -61,7 +61,7 @@ fn render_embed(
 }
 
 fn render_many(template: Template) -> Result(String, String) {
-  assert Many(contents: contents) = template
+  let assert Many(contents: contents) = template
 
   contents
   |> list.map(render)
@@ -70,7 +70,7 @@ fn render_many(template: Template) -> Result(String, String) {
 }
 
 fn render_raw(template: Template) -> Result(String, String) {
-  assert Raw(contents: contents) = template
+  let assert Raw(contents: contents) = template
 
   Ok(contents)
 }

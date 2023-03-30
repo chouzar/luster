@@ -136,7 +136,7 @@ fn new_hands(p1: Player, p2: Player) -> Map(Player, List(Card)) {
 pub fn draw_card(state: GameState, for player: Player) -> #(Card, GameState) {
   let [card, ..deck] = state.deck
 
-  assert Ok(hand) = map.get(state.hands, player)
+  let assert Ok(hand) = map.get(state.hands, player)
   let hands = map.insert(state.hands, player, [card, ..hand])
 
   #(card, GameState(..state, deck: deck, hands: hands))
@@ -167,7 +167,7 @@ fn available_slots(line: BattleLine, for player: Player) -> List(Int) {
   line
   |> map.filter(fn(_index, position) { position.flag == None })
   |> map.filter(fn(_index, position) {
-    assert Ok(cards) = map.get(position.side, player)
+    let assert Ok(cards) = map.get(position.side, player)
     list.length(cards) < 3
   })
   |> map.keys()
