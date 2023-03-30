@@ -1,13 +1,11 @@
 import gleam/erlang/process.{Subject}
 import luster/session.{Message}
-import luster/battleline.{GameState, Player}
-import luster/web/payload.{
-  Flash, HTML, Render, Request, Response, Stream, TurboStream,
-}
+import luster/battleline.{Player}
+import luster/web/payload.{HTML, Render, Request, Response, Stream}
 import luster/web/component/turbo_stream.{Append, Update}
-import luster/web/lay.{Layout, Many, Raw, Template}
+import luster/web/lay.{Layout, Many, Raw}
 import luster/web/battleline/component/card_front
-import luster/web/battleline/component/card_back.{Clouds, Diamonds}
+import luster/web/battleline/component/card_back
 import luster/web/battleline/component/draw_deck
 
 //pub type Action {
