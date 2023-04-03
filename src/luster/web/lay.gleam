@@ -1,12 +1,21 @@
 import gleam/string
 import gleam/list
 import gleam/result
-import gleam/bbmustache.{CompileError} as mustache
+import gleam/bbmustache as mustache
 import luster/util
 
+// TODO: Choose a good name for this.
+// * Lay, Plant
+
+// TODO: We can futher de-couple bbmustache from the template engine
+// * Have it only compose string layouts
+// * Render function could have callbacks to use an engine
+// * Render function could generate a new function to use as an engine
+//   * render(from: File("x") | Text("x"), read_as, build_as)
+
 pub type Template {
-  // TODO: Maybe add a "static" constructor
   Layout(path: String, contents: List(#(String, Template)))
+  Static(path: String)
   Many(contents: List(Template))
   Raw(contents: String)
 }
@@ -16,6 +25,10 @@ pub fn render(template: Template) -> Result(String, String) {
     Layout(path: path, contents: contents) ->
       Layout(path: path, contents: contents)
       |> render_layout()
+
+    Static(path: path) ->
+      Static(path: path)
+      |> render_static()
 
     Many(contents: contents) ->
       Many(contents: contents)
@@ -43,9 +56,40 @@ fn render_layout(template: Template) -> Result(String, String) {
       |> result.all()
       |> result.map(mustache.render(compiled, _))
 
-    Error(error) ->
-      error
-      |> report(base_path, path)
+    Error(error) -> {
+      util.report([
+        "Error: " <> string.inspect(Error(error)),
+        "Base: " <> base_path,
+        "Path: " <> path,
+      ])
+
+      Error("Unable to render page")
+    }
+  }
+}
+
+fn render_static(template: Template) -> Result(String, String) {
+  let assert Static(path: path) = template
+
+  let base_path = util.root_path()
+
+  let full_path =
+    [base_path, path]
+    |> string.join(with: "/")
+
+  case util.read_file(full_path) {
+    Ok(document) -> Ok(document)
+
+    // TODO: What is this error? 
+    Error(error) -> {
+      util.report([
+        "Error: " <> string.inspect(Error(error)),
+        "Base: " <> base_path,
+        "Path: " <> path,
+      ])
+
+      Error("Unable to load file")
+    }
   }
 }
 
@@ -73,18 +117,4 @@ fn render_raw(template: Template) -> Result(String, String) {
   let assert Raw(contents: contents) = template
 
   Ok(contents)
-}
-
-fn report(
-  error: CompileError,
-  base_path: String,
-  path: String,
-) -> Result(String, String) {
-  util.report([
-    "Error: " <> string.inspect(Error(error)),
-    "Base: " <> base_path,
-    "Path: " <> path,
-  ])
-
-  Error("Unable to render page")
 }

@@ -21,7 +21,6 @@ pub fn get(subject: Subject(Message), id: String) -> GameState {
   let make_message = fn(caller: Subject(GameState)) -> Message {
     GetSession(caller, id)
   }
-
   actor.call(subject, make_message, 100)
 }
 

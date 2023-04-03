@@ -3,12 +3,12 @@ import luster/util
 import luster/session.{Message}
 import luster/battleline
 import luster/web/lay.{Layout}
-import luster/web/payload.{HTML, Redirect, Render, Request, Response}
+import luster/web/payload.{Document, HTML, In, Out, Redirect}
 
-pub fn index(_request: Request) -> Response {
-  Render(
+pub fn index(_payload: In) -> Out {
+  Document(
     mime: HTML,
-    document: Layout(
+    template: Layout(
       path: "src/luster/web/arcade/component/index.html",
       contents: [],
     ),
@@ -16,10 +16,10 @@ pub fn index(_request: Request) -> Response {
 }
 
 pub fn new_battleline(
-  _request: Request,
+  _payload: In,
   session_pid: Subject(Message),
   player_id: String,
-) -> Response {
+) -> Out {
   let p1 = battleline.Player(player_id)
   let p2 = battleline.Computer
   let state = battleline.new_game(p1, p2)

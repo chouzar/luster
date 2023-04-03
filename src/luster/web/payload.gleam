@@ -4,8 +4,8 @@ import luster/web/context.{Context}
 import luster/web/lay.{Template}
 
 /// Abstraction to render responses in an easier way.
-pub type Request {
-  Request(
+pub type In {
+  In(
     method: http.Method,
     static_path: String,
     path: List(String),
@@ -14,30 +14,24 @@ pub type Request {
   )
 }
 
-pub type Response {
-
-  // TODO: document could be of the `Template` type
-  // TODO: Render and Stream should be the same but with more control on response header
-  Render(mime: MIME, document: Template)
-  Stream(document: Template)
-  Static(mime: MIME, path: String)
+pub type Out {
+  Document(mime: MIME, template: Template)
   Redirect(location: String)
-  Flash(message: String, color: String)
   NotFound(message: String)
 }
-
-// TODO:
-// Mount(path: "html" or module)
-// Layout(source: 
-// Stream(patch: [
-//  action: "replace", key: "id", value: "Hello",
-//  action: "replace", key: "id", value: "Hello",
-//  action: "replace", key: "id", value: "Hello",
-// ])
 
 pub type MIME {
   HTML
   CSS
   Favicon
   TurboStream
+}
+
+pub fn content_type(mime: MIME) -> String {
+  case mime {
+    HTML -> "text/html; charset=utf-8"
+    CSS -> "text/css"
+    Favicon -> "image/x-icon"
+    TurboStream -> "text/vnd.turbo-stream.html; charset=utf-8"
+  }
 }

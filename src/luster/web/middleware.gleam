@@ -2,116 +2,65 @@ import gleam/bit_string
 import gleam/bit_builder.{BitBuilder}
 import gleam/map.{Map}
 import gleam/uri
+import gleam/result
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
-import luster/web/payload
+import luster/web/payload.{Document, In, MIME, NotFound, Out, Redirect}
 import luster/web/context
 import luster/web/lay.{Layout}
 
 pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
-  // TODO; If request is a form, add the form data
   request.map(request, decode_uri_string)
 }
 
 fn decode_uri_string(value: BitString) -> Map(String, String) {
-  // An alternative is to use the: 
-  // * `uri_string:dissect_query` from erlang
-  // * `Plug.Conn.Query.decode` from elixir's Plug
   let assert Ok(value) = bit_string.to_string(value)
   let assert Ok(params) = uri.parse_query(value)
   map.from_list(params)
 }
 
-pub fn from_mist_request(req: Request(Map(String, String))) -> payload.Request {
-  payload.Request(
-    method: req.method,
-    static_path: req.path,
-    path: request.path_segments(req),
-    form_data: req.body,
+pub fn from_mist_request(request: Request(Map(String, String))) -> In {
+  In(
+    method: request.method,
+    static_path: request.path,
+    path: request.path_segments(request),
+    form_data: request.body,
     context: context.None,
   )
 }
 
-// TODO: Move a lot of this logic to the payload type
-// TODO: separate payload type into request/response
-pub fn into_mist_response(resp: payload.Response) -> Response(String) {
-  case resp {
-    payload.Render(mime, templ) ->
-      case lay.render(templ) {
-        Ok(document) ->
-          response.new(200)
-          |> response.prepend_header("content-type", content_type(mime))
-          |> response.set_body(document)
+pub fn into_mist_response(payload: Out) -> Response(String) {
+  case payload {
+    Document(mime, template) ->
+      template
+      |> lay.render()
+      |> result.map(render(mime, _))
+      |> result.map_error(server_error)
+      |> result.unwrap_both()
 
-        Error(_) ->
-          response.new(404)
-          |> response.set_body("Error rendering component")
-      }
-
-    payload.Stream(templ) ->
-      case lay.render(templ) {
-        Ok(document) ->
-          response.new(200)
-          |> response.prepend_header(
-            "content-type",
-            content_type(payload.TurboStream),
-          )
-          |> response.set_body(document)
-
-        Error(_) ->
-          response.new(404)
-          |> response.set_body("Error rendering component")
-      }
-
-    payload.Static(mime, path) ->
-      case
-        Layout(path: path, contents: [])
-        |> lay.render()
-      {
-        Ok(document) ->
-          response.new(200)
-          |> response.prepend_header("content-type", content_type(mime))
-          |> response.set_body(document)
-
-        Error(_) ->
-          response.new(404)
-          |> response.set_body("Resource not found")
-      }
-
-    payload.Redirect(location: path) ->
+    Redirect(location: path) ->
       response.new(303)
       |> response.prepend_header("location", path)
 
-    payload.Flash(_message, _color) ->
-      case
-        Layout(path: "src/luster/web/component/flash.html", contents: [])
-        |> lay.render()
-      {
-        Ok(document) ->
-          response.new(200)
-          |> response.prepend_header("content-type", content_type(payload.HTML))
-          |> response.set_body(document)
-
-        Error(_) ->
-          response.new(404)
-          |> response.set_body("Flash not found")
-      }
-
-    payload.NotFound(message) ->
+    NotFound(message) ->
       response.new(404)
       |> response.set_body(message)
   }
 }
 
-pub fn to_bit_builder(resp: Response(String)) -> Response(BitBuilder) {
-  response.map(resp, bit_builder.from_string)
+fn render(mime_type: MIME, document: String) -> response.Response(String) {
+  response.new(200)
+  |> response.prepend_header("content-type", payload.content_type(mime_type))
+  |> response.set_body(document)
 }
 
-fn content_type(mime: payload.MIME) -> String {
-  case mime {
-    payload.HTML -> "text/html; charset=utf-8"
-    payload.CSS -> "text/css"
-    payload.Favicon -> "image/x-icon"
-    payload.TurboStream -> "text/vnd.turbo-stream.html; charset=utf-8"
-  }
+fn server_error(error: String) -> response.Response(String) {
+  response.new(500)
+  |> response.set_body("Error rendering component")
+}
+
+pub fn to_bit_builder(
+  resp: response.Response(String),
+) -> response.Response(BitBuilder) {
+  response.map(resp, bit_builder.from_string)
 }

@@ -9,10 +9,9 @@ import mist
 // Add supervision tree
 
 pub fn main() -> Nil {
-  // TODO:
-  // start with supervisor, 
-  // children could be inspected 
-  // then passed to the service
+  // TODO: Add a proper supervision tree
+  // Children could be inspected then passed to the service in order
+  // to know the "names" of the servers.
   //assert Ok(subject) =
   //  supervisor.start(fn(children) {
   //    children

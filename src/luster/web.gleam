@@ -1,6 +1,3 @@
-//// Adds 1 new id, gamestate to the session
-
-import gleam/io
 import gleam/erlang/process.{Subject}
 import gleam/bit_builder.{BitBuilder}
 import gleam/string
@@ -12,9 +9,8 @@ import luster/web/middleware
 import luster/web/arcade
 import luster/web/battleline
 import luster/session.{Message}
-import luster/web/payload.{
-  CSS, Favicon, Flash, NotFound, Request, Response, Static,
-}
+import luster/web/lay.{Static}
+import luster/web/payload.{CSS, Document, Favicon, In, NotFound, Out}
 
 pub fn service(
   session_pid: Subject(Message),
@@ -31,38 +27,35 @@ pub fn service(
   }
 }
 
-// TODO: Eventually eliminate all `Request` data passed to controllers
-// or eventually add everything to `Request` so we can get request -> resposne controllers
-fn router(request: Request, session_pid: Subject(session.Message)) -> Response {
+fn router(payload: In, session_pid: Subject(session.Message)) -> Out {
   let player_id = "Raúl"
-  let _flash_error = fn(message) { flash(request, message, "red") }
 
-  case request.method, request.path {
+  case payload.method, payload.path {
     Get, [] ->
-      request
+      payload
       |> arcade.index()
 
     Post, ["new-battleline"] ->
-      request
+      payload
       |> arcade.new_battleline(session_pid, player_id)
 
     Get, ["battleline", session_id] ->
-      request
+      payload
       |> battleline.mount(session_pid, session_id, player_id)
 
     Post, ["battleline", session_id, "draw-card"] ->
-      request
+      payload
       |> battleline.draw_card(session_pid, session_id, player_id)
 
     Get, ["assets", ..] ->
-      request
+      payload
       |> assets()
 
     _, _ -> {
       util.report([
         "Error: Unable to find path",
-        "Method: " <> http.method_to_string(request.method),
-        "Path: " <> request.static_path,
+        "Method: " <> http.method_to_string(payload.method),
+        "Path: " <> payload.static_path,
       ])
 
       NotFound(message: "Page not found")
@@ -70,43 +63,33 @@ fn router(request: Request, session_pid: Subject(session.Message)) -> Response {
   }
 }
 
-fn assets(request: Request) -> Response {
-  // TODO: Find a generic way to do this.
-  case request.static_path {
+fn assets(payload: In) -> Out {
+  // TODO: Find a generic way to get shared content.
+  case payload.static_path {
     "/assets/battleline/styles.css" ->
-      Static(mime: CSS, path: "/src/luster/web/battleline/assets/styles.css")
+      Document(
+        mime: CSS,
+        template: Static(path: "/src/luster/web/battleline/assets/styles.css"),
+      )
 
     "/assets/battleline/favicon.ico" ->
-      Static(
+      Document(
         mime: Favicon,
-        path: "/src/luster/web/battleline/assets/favicon.ico",
+        template: Static(path: "/src/luster/web/battleline/assets/favicon.ico"),
       )
   }
 }
 
-fn flash(request: Request, message: String, color: String) -> Response {
-  [
-    "Error: Invalid action",
-    "Method: " <> http.method_to_string(request.method),
-    "Path: " <> request.static_path,
-    "Data: Key" <> " key " <> "not found",
-  ]
-  |> string.join("/n")
-  |> io.print()
+fn flash(_payload: In, _message: String, _color: String) -> Out {
+  //[
+  //  "Error: Invalid action",
+  //  "Method: " <> http.method_to_string(request.method),
+  //  "Path: " <> request.static_path,
+  //  "Data: Key" <> " key " <> "not found",
+  //]
+  //|> string.join("/n")
+  //|> io.print()
 
-  Flash(message, color)
+  //Flash(message, color)
+  todo
 }
-// TODO: Build a validator module for maps
-// x-spec
-// Can be changeset like and based on predicates >-> Accumulates result errors
-// If everything passes
-// A last parameter could be used to map into a constructor record >-> Accumulates
-//   This last parameter could be validated at compile time by using the dynamic type
-//fn validate(
-//  form: Map(String, String),
-//  keys: List(String),
-//) -> Result(List(String), Nil) {
-//  keys
-//  |> list.map(fn(key) { map.get(form, key) })
-//  |> result.all()
-//}
