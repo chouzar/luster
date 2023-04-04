@@ -1,6 +1,6 @@
 import gleam/list
 import luster/battleline.{Card}
-import luster/web/lay.{Many, Template}
+import luster/web/plant.{Many, Template}
 import luster/web/battleline/component/card_back.{Background}
 
 pub fn new(back: Background, deck: List(Card)) -> Template {

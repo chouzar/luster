@@ -3,7 +3,7 @@ import luster/session.{Message}
 import luster/battleline.{Player}
 import luster/web/payload.{Document, HTML, In, Out, TurboStream}
 import luster/web/component/turbo_stream.{Append, Update}
-import luster/web/lay.{Layout, Many, Raw}
+import luster/web/plant.{Layout, Many, Raw}
 import luster/web/battleline/component/card_front
 import luster/web/battleline/component/card_back
 import luster/web/battleline/component/draw_deck

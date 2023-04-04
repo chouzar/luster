@@ -9,7 +9,7 @@ import luster/web/middleware
 import luster/web/arcade
 import luster/web/battleline
 import luster/session.{Message}
-import luster/web/lay.{Static}
+import luster/web/plant.{Static}
 import luster/web/payload.{CSS, Document, Favicon, In, NotFound, Out}
 
 pub fn service(

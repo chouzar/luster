@@ -2,7 +2,7 @@ import gleam/erlang/process.{Subject}
 import luster/util
 import luster/session.{Message}
 import luster/battleline
-import luster/web/lay.{Layout}
+import luster/web/plant.{Layout}
 import luster/web/payload.{Document, HTML, In, Out, Redirect}
 
 pub fn index(_payload: In) -> Out {

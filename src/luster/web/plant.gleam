@@ -11,7 +11,11 @@ import luster/util
 // * Have it only compose string layouts
 // * Render function could have callbacks to use an engine
 // * Render function could generate a new function to use as an engine
-//   * render(from: File("x") | Text("x"), read_as, build_as)
+//   * render(from: File("x"), read_as, build_as), Providing a type
+//   * render(from: Text("x"), read_as, build_as), Providing a type
+//   * render(from: "xyz", fn(x) { x }, build_as), Providing a function
+//   * render(from: "xyz", None, Some(fn(x) { x })), These are implicit
+//   * render(from: "xyz", Some(fn(x) { x }), None), These are implicit
 
 pub type Template {
   Layout(path: String, contents: List(#(String, Template)))

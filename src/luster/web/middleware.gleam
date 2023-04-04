@@ -7,7 +7,7 @@ import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import luster/web/payload.{Document, In, MIME, NotFound, Out, Redirect}
 import luster/web/context
-import luster/web/lay.{Layout}
+import luster/web/plant.{Layout}
 
 pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
   request.map(request, decode_uri_string)
@@ -33,7 +33,7 @@ pub fn into_mist_response(payload: Out) -> Response(String) {
   case payload {
     Document(mime, template) ->
       template
-      |> lay.render()
+      |> plant.render()
       |> result.map(render(mime, _))
       |> result.map_error(server_error)
       |> result.unwrap_both()

@@ -1,7 +1,7 @@
 import gleam/map.{Map}
 import gleam/http
 import luster/web/context.{Context}
-import luster/web/lay.{Template}
+import luster/web/plant.{Template}
 
 /// Abstraction to render responses in an easier way.
 pub type In {
