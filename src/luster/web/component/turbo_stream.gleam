@@ -1,4 +1,4 @@
-import luster/web/plant.{Layout, Raw, Template}
+import luster/web/plant
 
 pub type Action {
   Append
@@ -13,8 +13,8 @@ pub type Action {
 pub fn new(
   do action: Action,
   at target: String,
-  with content: Template,
-) -> Template {
+  with content: plant.Template,
+) -> plant.Template {
   let action = case action {
     Append -> "append"
     Prepend -> "prepend"
@@ -25,11 +25,11 @@ pub fn new(
     After -> "after"
   }
 
-  Layout(
-    path: "src/luster/web/component/turbo_stream.html",
-    contents: [
-      #("action", Raw(action)),
-      #("target", Raw(target)),
+  plant.lay(
+    from: "src/luster/web/component/turbo_stream.html",
+    with: [
+      #("action", plant.raw(action)),
+      #("target", plant.raw(target)),
       #("content", content),
     ],
   )

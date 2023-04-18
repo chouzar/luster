@@ -1,9 +1,9 @@
 import gleam/list
 import luster/battleline.{Card}
-import luster/web/plant.{Many, Template}
+import luster/web/plant
 import luster/web/battleline/component/card_back.{Background}
 
-pub fn new(back: Background, deck: List(Card)) -> Template {
+pub fn new(back: Background, deck: List(Card)) -> plant.Template {
   let count = case list.length(deck) {
     x if x > 48 -> 13
     x if x > 44 -> 12
@@ -23,5 +23,5 @@ pub fn new(back: Background, deck: List(Card)) -> Template {
 
   let card = card_back.new(back)
 
-  Many(contents: list.repeat(card, count))
+  plant.many(list.repeat(card, count))
 }

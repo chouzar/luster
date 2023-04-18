@@ -7,7 +7,7 @@ import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import luster/web/payload.{Document, In, MIME, NotFound, Out, Redirect}
 import luster/web/context
-import luster/web/plant.{Layout}
+import luster/web/plant
 
 pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
   request.map(request, decode_uri_string)

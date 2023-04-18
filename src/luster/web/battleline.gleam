@@ -3,7 +3,7 @@ import luster/session.{Message}
 import luster/battleline.{Player}
 import luster/web/payload.{Document, HTML, In, Out, TurboStream}
 import luster/web/component/turbo_stream.{Append, Update}
-import luster/web/plant.{Layout, Many, Raw}
+import luster/web/plant
 import luster/web/battleline/component/card_front
 import luster/web/battleline/component/card_back
 import luster/web/battleline/component/draw_deck
@@ -18,10 +18,10 @@ pub fn mount(
 
   Document(
     mime: HTML,
-    template: Layout(
-      path: "src/luster/web/battleline/component/layout.html",
-      contents: [
-        #("session-id", Raw(session_id)),
+    template: plant.lay(
+      from: "src/luster/web/battleline/component/layout.html",
+      with: [
+        #("session-id", plant.raw(session_id)),
         #("odd-pile", draw_deck.new(card_back.Clouds, state.deck)),
         #("draw-pile", draw_deck.new(card_back.Diamonds, state.deck)),
       ],
@@ -42,7 +42,7 @@ pub fn draw_card(
 
   Document(
     mime: TurboStream,
-    template: Many([
+    template: plant.many([
       turbo_stream.new(
         at: "player-hand",
         do: Append,

@@ -1,6 +1,5 @@
 import gleam/erlang/process.{Subject}
 import gleam/bit_builder.{BitBuilder}
-import gleam/string
 import gleam/http.{Get, Post}
 import gleam/http/request
 import gleam/http/response
@@ -9,7 +8,7 @@ import luster/web/middleware
 import luster/web/arcade
 import luster/web/battleline
 import luster/session.{Message}
-import luster/web/plant.{Static}
+import luster/web/plant
 import luster/web/payload.{CSS, Document, Favicon, In, NotFound, Out}
 
 pub fn service(
@@ -69,13 +68,13 @@ fn assets(payload: In) -> Out {
     "/assets/battleline/styles.css" ->
       Document(
         mime: CSS,
-        template: Static(path: "/src/luster/web/battleline/assets/styles.css"),
+        template: plant.static("/src/luster/web/battleline/assets/styles.css"),
       )
 
     "/assets/battleline/favicon.ico" ->
       Document(
         mime: Favicon,
-        template: Static(path: "/src/luster/web/battleline/assets/favicon.ico"),
+        template: plant.static("/src/luster/web/battleline/assets/favicon.ico"),
       )
   }
 }

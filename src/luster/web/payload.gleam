@@ -1,7 +1,7 @@
 import gleam/map.{Map}
 import gleam/http
 import luster/web/context.{Context}
-import luster/web/plant.{Template}
+import luster/web/plant
 
 /// Abstraction to render responses in an easier way.
 pub type In {
@@ -15,7 +15,7 @@ pub type In {
 }
 
 pub type Out {
-  Document(mime: MIME, template: Template)
+  Document(mime: MIME, template: plant.Template)
   Redirect(location: String)
   NotFound(message: String)
 }

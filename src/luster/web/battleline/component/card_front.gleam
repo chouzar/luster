@@ -1,8 +1,8 @@
 import gleam/int
 import luster/battleline.{Card, Club, Diamond, Heart, Spade}
-import luster/web/plant.{Layout, Raw, Template}
+import luster/web/plant
 
-pub fn new(card: Card) -> Template {
+pub fn new(card: Card) -> plant.Template {
   let suit = case card.suit {
     Spade -> "♠"
     Heart -> "♥"
@@ -19,12 +19,12 @@ pub fn new(card: Card) -> Template {
 
   let rank = int.to_string(card.rank)
 
-  Layout(
-    path: "src/luster/web/battleline/component/card_front.html",
-    contents: [
-      #("suit", Raw(suit)),
-      #("rank", Raw(rank)),
-      #("color", Raw(color)),
+  plant.lay(
+    from: "src/luster/web/battleline/component/card_front.html",
+    with: [
+      #("suit", plant.raw(suit)),
+      #("rank", plant.raw(rank)),
+      #("color", plant.raw(color)),
     ],
   )
 }

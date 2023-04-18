@@ -2,16 +2,13 @@ import gleam/erlang/process.{Subject}
 import luster/util
 import luster/session.{Message}
 import luster/battleline
-import luster/web/plant.{Layout}
+import luster/web/plant
 import luster/web/payload.{Document, HTML, In, Out, Redirect}
 
 pub fn index(_payload: In) -> Out {
   Document(
     mime: HTML,
-    template: Layout(
-      path: "src/luster/web/arcade/component/index.html",
-      contents: [],
-    ),
+    template: plant.static("src/luster/web/arcade/component/index.html"),
   )
 }
 
