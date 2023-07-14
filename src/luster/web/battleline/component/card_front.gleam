@@ -1,6 +1,9 @@
 import gleam/int
-import luster/battleline.{Card, Club, Diamond, Heart, Spade}
+import luster/battleline/pieces.{Card, Club, Diamond, Heart, Spade}
 import luster/web/plant
+import nakai
+import nakai/html.{Text, div, p}
+import nakai/html/attrs
 
 pub fn new(card: Card) -> plant.Template {
   let suit = case card.suit {
@@ -19,12 +22,20 @@ pub fn new(card: Card) -> plant.Template {
 
   let rank = int.to_string(card.rank)
 
-  plant.lay(
-    from: "src/luster/web/battleline/component/card_front.html",
-    with: [
-      #("suit", plant.raw(suit)),
-      #("rank", plant.raw(rank)),
-      #("color", plant.raw(color)),
+  div(
+    [attrs.class("card front clouds " <> color)],
+    [
+      div(
+        [attrs.class("upper-left")],
+        [p([], [Text(rank)]), p([], [Text(suit)])],
+      ),
+      div([attrs.class("graphic")], [p([], [Text(suit)])]),
+      div(
+        [attrs.class("bottom-right")],
+        [p([], [Text(rank)]), p([], [Text(suit)])],
+      ),
     ],
   )
+  |> nakai.to_inline_string()
+  |> plant.raw()
 }

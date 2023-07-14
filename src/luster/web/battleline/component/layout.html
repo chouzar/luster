@@ -18,12 +18,16 @@
   <form id="draw-card" method="post" action="/battleline/{{session-id}}/draw-card">
     <input type="hidden" name="player-id" value="{{player-id}}" />
   </form>
+  
+  <section id="alert-message" class="alerts">
+    {{{alert-message}}}
+  </section> 
 
   <div class="board">
     <div class="deck">
       <section class="draw-pile">
         <button id="odd-pile" form="draw-card">
-          {{{draw-pile}}}
+          {{{odd-pile}}}
         </button>
       </section>
     </div>
@@ -53,6 +57,7 @@
       </section>
 
       <section id="player-hand" class="hand">
+        {{{player-hand}}}
       </section>
     </div>
 

@@ -1,208 +1,222 @@
 import gleam/list
 import gleam/map.{Map}
-import gleam/option.{None, Option, Some}
 import gleam/result
+import luster/battleline/board.{Board}
+import luster/battleline/pieces.{Card}
 
-pub type GameState {
-  GameState(
-    phase: Phase,
-    battle_line: BattleLine,
-    deck: List(Card),
-    player_sequence: List(Player),
-    hands: Map(Player, List(Card)),
-  )
-}
+// TODO: Rummy like card play with the discards
+// TODO: Play cards 3 by 3
+// TODO: Simultaneous play for players
+// TODO: Create a basic computer player to play against
+// * Can do actions and other turns asynchronously
+// TODO: How to protect other players applying actions in place of the other.
+// TODO: In extreme scenarios a player could get the whole player's hand by querying the server.
 
-pub type Phase {
-  InitialDraw
-  ClaimFlag(Player)
-  PlayCard(Player)
-  Draw(Player)
-}
+// TODO: Build an introspection API around the general board and functions that are needed
 
 const max_hand_size = 7
-
-fn next_phase(state: GameState) -> GameState {
-  // TODO: This shouldn't change state only the phase
-  // Maybe operate at the phase level to avoid issues
-  let GameState(player_sequence: players, hands: hands, ..) = state
-
-  let next_phase: Phase = case state.phase {
-    InitialDraw ->
-      case
-        players
-        |> list.map(fn(player) {
-          hands
-          |> map.get(player)
-          |> result.unwrap([])
-        })
-        |> list.all(fn(hand) { list.length(hand) == max_hand_size })
-      {
-        True -> ClaimFlag(current_player(state))
-        False -> InitialDraw
-      }
-
-    ClaimFlag(player) -> todo
-    PlayCard(player) -> todo
-    Draw(player) -> todo
-  }
-
-  GameState(..state, phase: next_phase)
-}
-
-//fn next_phase(state: GameState) -> GameState {
-// case state.phase {
-//  InitialDraw -> 
-// } 
-//}
-
-pub type Position {
-  Position(flag: Option(Player), side: Map(Player, List(Card)))
-}
-
-type BattleLine =
-  Map(Int, Position)
 
 pub type Player {
   Player(id: String)
   Computer
 }
 
-pub type Suit {
-  Spade
-  Heart
-  Diamond
-  Club
-}
-
-pub type Card {
-  Normal(rank: Int, suit: Suit)
-}
-
-type Formation {
-  ThreeSuitsInSequence
-  ThreeOfSameRank
-  ThreeInSequence
-  ThreeSuits
-  HighCard
-}
-
-type Victory {
-  Breakthrough
-  Envelopment
-}
-
-pub fn new_game(p1 p1: Player, p2 p2: Player) -> GameState {
+pub opaque type GameState {
   GameState(
-    phase: InitialDraw,
-    battle_line: new_battle_line(p1, p2),
-    deck: new_deck(),
-    player_sequence: list.shuffle([p1, p2]),
-    hands: new_hands(p1, p2),
+    phase: Phase,
+    board: Board,
+    sequence: List(Player),
+    association: Map(Player, board.Player),
   )
 }
 
-fn new_battle_line(p1: Player, p2: Player) -> BattleLine {
-  let position =
-    Position(
-      flag: None,
-      side: map.new()
-      |> map.insert(p1, [])
-      |> map.insert(p2, []),
-    )
-
-  use map, index <- list.fold(list.range(1, 9), map.new())
-  map.insert(map, index, position)
+type Phase {
+  InitialDraw
+  ClaimFlag
+  PlayCard
+  Draw
 }
 
-fn new_deck() -> List(Card) {
-  list.shuffle({
-    use rank <- list.flat_map([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
-    use suit <- list.map([Spade, Heart, Diamond, Club])
-    new_card(rank, suit)
-  })
+pub type Errors {
+  NotCurrentPhase
+  NotCurrentPlayer
+  Board(board.Errors)
 }
 
-fn new_hands(p1: Player, p2: Player) -> Map(Player, List(Card)) {
-  map.new()
-  |> map.insert(p1, [])
-  |> map.insert(p2, [])
+// ACTIONS API
+
+/// Creates a new state with initial defaults
+pub fn new(p1 p1: Player, p2 p2: Player) -> GameState {
+  GameState(
+    phase: InitialDraw,
+    board: board.new(),
+    sequence: list.shuffle([p1, p2]),
+    association: map.new()
+    |> map.insert(p1, board.Player1)
+    |> map.insert(p2, board.Player2),
+  )
 }
 
-// TODO: There's a draw card where the player can be deducted from 
-// the gamestate. 
-//
-// There's this one which depends on the session.
-pub fn draw_card(state: GameState, for player: Player) -> #(Card, GameState) {
-  let [card, ..deck] = state.deck
-
-  let assert Ok(hand) = map.get(state.hands, player)
-  let hands = map.insert(state.hands, player, [card, ..hand])
-
-  #(card, GameState(..state, deck: deck, hands: hands))
-}
-
-fn claim_flag(state: GameState, for player: Player) -> GameState {
-  todo
-}
-
-fn play_card(
+/// Player draws a card during the Initial Draw phase 
+pub fn initial_draw(
   state: GameState,
-  for player: Player,
-  at position: Int,
-) -> GameState {
-  todo
+  of player: Player,
+) -> Result(GameState, Errors) {
+  Ok(state)
+  |> result.then(check_phase(_, InitialDraw))
+  |> result.then(check_current_player(_, player))
+  |> result.then(board_draw_card(_, player))
+  |> result.map(next_phase)
 }
 
-pub fn current_player(state: GameState) -> Player {
-  let [player, ..] = state.player_sequence
-  player
+/// Player claims a flag during the Claim Flag phase
+pub fn claim_flag(
+  state: GameState,
+  of player: Player,
+  at slot: board.Slot,
+) -> Result(GameState, Errors) {
+  Ok(state)
+  |> result.then(check_phase(_, ClaimFlag))
+  |> result.then(check_current_player(_, player))
+  |> result.then(board_claim_flag(_, player, slot))
+  |> result.map(next_phase)
 }
 
-fn new_card(rank: Int, suit: Suit) -> Card {
-  Normal(rank: rank, suit: suit)
+/// Player plays a card during the Play Card phase
+pub fn play_card(
+  state: GameState,
+  of player: Player,
+  with card: Card,
+  at slot: board.Slot,
+) -> Result(GameState, Errors) {
+  Ok(state)
+  |> result.then(check_phase(_, PlayCard))
+  |> result.then(check_current_player(_, player))
+  |> result.then(board_play_card(_, player, card, slot))
+  |> result.map(next_phase)
 }
 
-fn available_slots(line: BattleLine, for player: Player) -> List(Int) {
-  line
-  |> map.filter(fn(_index, position) { position.flag == None })
-  |> map.filter(fn(_index, position) {
-    let assert Ok(cards) = map.get(position.side, player)
-    list.length(cards) < 3
-  })
-  |> map.keys()
+/// Player draws a card during the Draw phase
+pub fn replentish_hand(
+  state: GameState,
+  of player: Player,
+) -> Result(GameState, Errors) {
+  Ok(state)
+  |> result.then(check_phase(_, Draw))
+  |> result.then(check_current_player(_, player))
+  |> result.then(board_draw_card(_, player))
+  |> result.map(next_phase)
+  |> result.map(next_player)
 }
 
-fn victory(line: BattleLine, for player: Player) -> Bool {
-  check_breakthrough(line, for: player) && check_envelopment(line, for: player)
+// GAMESTATE INTROSPECTION API
+
+/// Retrieves a player's full hand
+pub fn hand(state: GameState, of player: Player) -> List(Card) {
+  let player = get(state.association, player)
+  board.hand(state.board, of: player)
 }
 
-fn check_breakthrough(line: BattleLine, for player: Player) -> Bool {
-  let chunk =
-    list.range(1, 9)
-    |> list.map(get_position(line, _))
-    |> list.window(3)
-
-  use positions <- list.any(chunk)
-  use position <- list.all(positions)
-  Some(player) == position.flag
+/// Retrieves the current deck size
+pub fn deck_size(state: GameState) -> Int {
+  board.deck_size(state.board)
 }
 
-fn get_position(line: BattleLine, index: Int) -> Position {
-  line
-  |> map.get(index)
-  |> result.unwrap(Position(flag: None, side: map.new()))
+// FUNCTION HELPERS
+
+fn board_draw_card(
+  state: GameState,
+  player: Player,
+) -> Result(GameState, Errors) {
+  let player = get(state.association, player)
+
+  case board.draw(state.board, player) {
+    Ok(board) -> Ok(GameState(..state, board: board))
+    Error(error) -> Error(Board(error))
+  }
 }
 
-fn check_envelopment(line: BattleLine, for player: Player) -> Bool {
-  line
-  |> map.filter(fn(_index, position) { position.flag == Some(player) })
-  |> map.size() >= 5
-}
-// TODO: Other fields for position:
-// * Add hand score 
-// * Add hand "weight" or "formation"
-// Similar to the flag, this is info that could be computed
+fn board_claim_flag(
+  state: GameState,
+  player: Player,
+  slot: board.Slot,
+) -> Result(GameState, Errors) {
+  let player = get(state.association, player)
 
-// TODO: Create a basic computer player to play against
-// * Can do actions and other turns asynchronously
+  case board.claim_flag(state.board, of: player, at: slot) {
+    Ok(board) -> Ok(GameState(..state, board: board))
+    Error(error) -> Error(Board(error))
+  }
+}
+
+fn board_play_card(
+  state: GameState,
+  player: Player,
+  card: Card,
+  slot: board.Slot,
+) -> Result(GameState, Errors) {
+  let player = get(state.association, player)
+
+  case board.play(state.board, with: card, of: player, at: slot) {
+    Ok(board) -> Ok(GameState(..state, board: board))
+    Error(error) -> Error(Board(error))
+  }
+}
+
+fn check_phase(state: GameState, phase: Phase) -> Result(GameState, Errors) {
+  case state.phase == phase {
+    True -> Ok(state)
+    False -> Error(NotCurrentPhase)
+  }
+}
+
+fn check_current_player(
+  state: GameState,
+  player: Player,
+) -> Result(GameState, Errors) {
+  case first(state.sequence) {
+    current if current == player -> Ok(state)
+    _other -> Error(NotCurrentPlayer)
+  }
+}
+
+fn next_phase(state: GameState) -> GameState {
+  case state.phase {
+    InitialDraw -> {
+      let are_hands_complete =
+        state.sequence
+        |> list.map(fn(player) { get(state.association, player) })
+        |> list.map(fn(board_player) {
+          board.hand(state.board, of: board_player)
+        })
+        |> list.all(fn(hand) { list.length(hand) == max_hand_size })
+
+      case are_hands_complete {
+        True -> GameState(..state, phase: ClaimFlag)
+        False -> state
+      }
+    }
+    ClaimFlag -> GameState(..state, phase: PlayCard)
+    PlayCard -> GameState(..state, phase: Draw)
+    Draw -> GameState(..state, phase: ClaimFlag)
+  }
+}
+
+fn next_player(state: GameState) -> GameState {
+  GameState(..state, sequence: rotate(state.sequence))
+}
+
+fn get(map: Map(key, value), key: key) -> value {
+  let assert Ok(value) = map.get(map, key)
+  value
+}
+
+fn first(list: List(x)) -> x {
+  let assert [head, ..] = list
+  head
+}
+
+fn rotate(list: List(x)) -> List(x) {
+  let assert [head, ..tail] = list
+  list.append(tail, [head])
+}

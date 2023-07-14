@@ -19,7 +19,7 @@ pub fn new_battleline(
 ) -> Out {
   let p1 = battleline.Player(player_id)
   let p2 = battleline.Computer
-  let state = battleline.new_game(p1, p2)
+  let state = battleline.new(p1, p2)
 
   let id = util.proquint_triplet()
   let assert Nil = session.set(session_pid, id, state)

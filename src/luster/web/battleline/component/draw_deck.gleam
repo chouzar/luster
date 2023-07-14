@@ -1,10 +1,9 @@
 import gleam/list
-import luster/battleline.{Card}
 import luster/web/plant
 import luster/web/battleline/component/card_back.{Background}
 
-pub fn new(back: Background, deck: List(Card)) -> plant.Template {
-  let count = case list.length(deck) {
+pub fn new(back: Background, size: Int) -> plant.Template {
+  let count = case size {
     x if x > 48 -> 13
     x if x > 44 -> 12
     x if x > 40 -> 11

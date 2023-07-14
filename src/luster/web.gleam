@@ -78,17 +78,3 @@ fn assets(payload: In) -> Out {
       )
   }
 }
-
-fn flash(_payload: In, _message: String, _color: String) -> Out {
-  //[
-  //  "Error: Invalid action",
-  //  "Method: " <> http.method_to_string(request.method),
-  //  "Path: " <> request.static_path,
-  //  "Data: Key" <> " key " <> "not found",
-  //]
-  //|> string.join("/n")
-  //|> io.print()
-
-  //Flash(message, color)
-  todo
-}

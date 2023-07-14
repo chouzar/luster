@@ -6,7 +6,8 @@ import mist
 
 //import gleam/erlang/process
 
-// Add supervision tree
+// TODO: Create a web, games and luster/runtime contexts
+// TODO: Add supervision tree
 
 pub fn main() -> Nil {
   // TODO: Add a proper supervision tree
