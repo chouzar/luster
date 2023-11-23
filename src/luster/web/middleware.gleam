@@ -1,19 +1,26 @@
 import gleam/bit_string
-import gleam/bit_builder.{BitBuilder}
-import gleam/map.{Map}
+import gleam/bit_builder.{type BitBuilder}
+import gleam/bytes_builder.{type BytesBuilder}
+import gleam/map.{type Map}
 import gleam/uri
 import gleam/result
-import gleam/http/request.{Request}
-import gleam/http/response.{Response}
-import luster/web/payload.{Document, In, MIME, NotFound, Out, Redirect}
+import gleam/http/request.{type Request}
+import gleam/http/response.{type Response}
+import luster/web/payload.{
+  type In, type MIME, type Out, Document, In, NotFound, Redirect,
+}
 import luster/web/context
 import luster/web/plant
+import mist.{type Connection, Bytes, ResponseData}
 
-pub fn process_form(request: Request(BitString)) -> Request(Map(String, String)) {
-  request.map(request, decode_uri_string)
+pub fn process_form(
+  request: Request(Connection),
+) -> Request(Map(String, String)) {
+  let assert Ok(body) = mist.read_body(request, 5000)
+  request.map(body, decode_uri_string)
 }
 
-fn decode_uri_string(value: BitString) -> Map(String, String) {
+fn decode_uri_string(value: BitArray) -> Map(String, String) {
   let assert Ok(value) = bit_string.to_string(value)
   let assert Ok(params) = uri.parse_query(value)
   map.from_list(params)
@@ -61,6 +68,9 @@ fn server_error(error: String) -> response.Response(String) {
 
 pub fn to_bit_builder(
   resp: response.Response(String),
-) -> response.Response(BitBuilder) {
-  response.map(resp, bit_builder.from_string)
+) -> response.Response(ResponseData) {
+  let response =
+    resp
+    |> response.map(bytes_builder.from_string)
+    |> response.map(Bytes(_))
 }

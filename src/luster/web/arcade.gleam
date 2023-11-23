@@ -1,9 +1,9 @@
-import gleam/erlang/process.{Subject}
+import gleam/erlang/process.{type Subject}
 import luster/util
-import luster/session.{Message}
+import luster/session.{type Message}
 import luster/battleline
 import luster/web/plant
-import luster/web/payload.{Document, HTML, In, Out, Redirect}
+import luster/web/payload.{type In, type Out, Document, HTML, Redirect}
 
 pub fn index(_payload: In) -> Out {
   Document(

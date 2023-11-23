@@ -1,10 +1,10 @@
 import gleam/list
-import gleam/erlang/process.{Subject}
-import luster/session.{Message}
+import gleam/erlang/process.{type Subject}
+import luster/session.{type Message}
 import luster/battleline.{Player}
 import luster/battleline/board
-import luster/web/payload.{Document, HTML, In, NotFound, Out, TurboStream}
-import luster/web/component/turbo_stream.{Append, Update}
+import luster/web/payload.{type In, type Out, Document, HTML, TurboStream}
+import luster/web/component/turbo_stream.{Update}
 import luster/web/plant
 import luster/web/battleline/component/alert_message
 import luster/web/battleline/component/card_front

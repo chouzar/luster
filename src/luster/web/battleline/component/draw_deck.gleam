@@ -1,6 +1,6 @@
 import gleam/list
 import luster/web/plant
-import luster/web/battleline/component/card_back.{Background}
+import luster/web/battleline/component/card_back.{type Background}
 
 pub fn new(back: Background, size: Int) -> plant.Template {
   let count = case size {

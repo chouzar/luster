@@ -1,6 +1,6 @@
-import gleam/map.{Map}
+import gleam/map.{type Map}
 import gleam/http
-import luster/web/context.{Context}
+import luster/web/context.{type Context}
 import luster/web/plant
 
 /// Abstraction to render responses in an easier way.

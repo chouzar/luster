@@ -1,10 +1,10 @@
 import gleam/int
 import gleam/list
-import gleam/map.{Map}
-import gleam/option.{None, Option, Some}
+import gleam/map.{type Map}
+import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/order.{Eq, Gt, Lt, Order}
-import luster/battleline/pieces.{Card, Club, Diamond, Heart, Normal, Spade}
+import gleam/order.{type Order, Eq, Gt, Lt}
+import luster/battleline/pieces.{type Card, Club, Diamond, Heart, Normal, Spade}
 
 pub type Player {
   Player1

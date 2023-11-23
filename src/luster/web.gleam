@@ -1,22 +1,23 @@
-import gleam/erlang/process.{Subject}
-import gleam/bit_builder.{BitBuilder}
+import gleam/erlang/process.{type Subject}
+import gleam/bit_builder.{type BitBuilder}
 import gleam/http.{Get, Post}
 import gleam/http/request
 import gleam/http/response
+import mist.{type Connection, ResponseData}
 import luster/util
 import luster/web/middleware
 import luster/web/arcade
 import luster/web/battleline
-import luster/session.{Message}
+import luster/session.{type Message}
 import luster/web/plant
-import luster/web/payload.{CSS, Document, Favicon, In, NotFound, Out}
+import luster/web/payload.{type In, type Out, CSS, Document, Favicon, NotFound}
 
 pub fn service(
   session_pid: Subject(Message),
-) -> fn(request.Request(BitString)) -> response.Response(BitBuilder) {
+) -> fn(request.Request(Connection)) -> response.Response(ResponseData) {
   // Starts 1 instance of the session server
 
-  fn(request: request.Request(BitString)) -> response.Response(BitBuilder) {
+  fn(request: request.Request(Connection)) -> response.Response(ResponseData) {
     request
     |> middleware.process_form()
     |> middleware.from_mist_request()

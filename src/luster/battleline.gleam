@@ -1,8 +1,8 @@
 import gleam/list
-import gleam/map.{Map}
+import gleam/map.{type Map}
 import gleam/result
-import luster/battleline/board.{Board}
-import luster/battleline/pieces.{Card}
+import luster/battleline/board.{type Board}
+import luster/battleline/pieces.{type Card}
 
 // TODO: Rummy like card play with the discards
 // TODO: Play cards 3 by 3

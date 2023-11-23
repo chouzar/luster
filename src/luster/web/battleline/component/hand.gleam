@@ -1,5 +1,5 @@
 import gleam/list
-import luster/battleline/pieces.{Card}
+import luster/battleline/pieces.{type Card}
 import luster/web/plant
 import luster/web/battleline/component/card_front
 

@@ -1,5 +1,5 @@
 import gleam/int
-import luster/battleline/pieces.{Card, Club, Diamond, Heart, Spade}
+import luster/battleline/pieces.{type Card, Club, Diamond, Heart, Spade}
 import luster/web/plant
 import nakai
 import nakai/html.{Text, div, p}

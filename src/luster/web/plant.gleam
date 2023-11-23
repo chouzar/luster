@@ -1,6 +1,6 @@
 import gleam/string
 import gleam/list
-import gleam/uri.{Uri}
+import gleam/uri.{type Uri}
 import gleam/result
 import gleam/bbmustache as mustache
 import luster/util

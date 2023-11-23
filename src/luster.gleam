@@ -23,6 +23,10 @@ pub fn main() -> Nil {
   let assert Ok(session) = session.start(Nil)
 
   let assert Ok(Nil) =
-    mist.run_service(8088, web.service(session), max_body_limit: 400_000)
+    web.service(session)
+    |> mist.new()
+    |> mist.port(8088)
+    |> mist.start_http()
+
   process.sleep_forever()
 }

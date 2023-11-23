@@ -1,6 +1,6 @@
 import nakai
-import nakai/html.{Node}
-import nakai/html/attrs.{Attr}
+import nakai/html
+import nakai/html/attrs
 import luster/web/plant
 import gleam/io
 

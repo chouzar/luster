@@ -1,7 +1,7 @@
-import gleam/map.{Map}
-import gleam/erlang/process.{Subject}
-import gleam/otp/actor.{Continue, Next, StartError, Stop}
-import luster/battleline.{GameState}
+import gleam/map.{type Map}
+import gleam/erlang/process.{type Subject}
+import gleam/otp/actor.{type Next, Continue, StartError, Stop}
+import luster/battleline.{type GameState}
 
 type State {
   State(sessions: Map(String, GameState))
@@ -32,18 +32,18 @@ pub fn close(subject: Subject(Message)) -> Nil {
   actor.send(subject, Close)
 }
 
-fn handle(message: Message, state: State) -> Next(State) {
+fn handle(message: Message, state: State) -> Next(Message, State) {
   case message {
     SetSession(id, game_state) ->
       state.sessions
       |> map.insert(id, game_state)
       |> State()
-      |> Continue()
+      |> actor.continue()
 
     GetSession(caller, id) -> {
       let assert Ok(session) = map.get(state.sessions, id)
       let Nil = actor.send(caller, session)
-      Continue(state)
+      actor.continue(state)
     }
 
     Close -> Stop(process.Normal)

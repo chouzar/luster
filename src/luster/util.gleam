@@ -21,17 +21,17 @@ fn id() -> String {
   |> proquint()
 }
 
-external fn proquint(binary) -> String =
-  "Elixir.Proquint" "encode"
+@external(erlang, "Elixir.Proquint", "encode")
+fn proquint(binary: String) -> String
 
-external fn random_bytes(seed) -> String =
-  "crypto" "strong_rand_bytes"
+@external(erlang, "crypto", "strong_rand_bytes")
+fn random_bytes(seed: Int) -> String
 
-external fn encode(binary) -> String =
-  "base64" "encode"
+@external(erlang, "base64", "encode")
+fn encode(binary: String) -> String
 
-pub external fn root_path() -> String =
-  "Elixir.File" "cwd!"
+@external(erlang, "Elixir.File", "cwd!")
+pub fn root_path() -> String
 
-pub external fn read_file(path: String) -> Result(String, error) =
-  "Elixir.File" "read"
+@external(erlang, "Elixir.File", "read")
+pub fn read_file(path: String) -> Result(String, error)
