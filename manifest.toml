@@ -3,23 +3,25 @@
 
 packages = [
   { name = "bbmustache", version = "1.12.2", build_tools = ["rebar3"], requirements = [], otp_app = "bbmustache", source = "hex", outer_checksum = "688B33A4D5CC2D51F575ADF0B3683FC40A38314A2F150906EDCFC77F5B577B3B" },
-  { name = "gleam_bbmustache", version = "2.1.0", build_tools = ["gleam"], requirements = ["bbmustache", "gleam_stdlib"], otp_app = "gleam_bbmustache", source = "hex", outer_checksum = "7C8AB381EA998C87895E7815A6EA2BB9B17BD7B0109671C6EA1339B4CE182649" },
+  { name = "chip", version = "0.1.7", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "chip", source = "hex", outer_checksum = "643C2C6806F80328D9EF77D4C8D3942D98583EA9AC63530404A6D41085E3B9E9" },
+  { name = "gleam_bbmustache", version = "2.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "bbmustache"], otp_app = "gleam_bbmustache", source = "hex", outer_checksum = "7C8AB381EA998C87895E7815A6EA2BB9B17BD7B0109671C6EA1339B4CE182649" },
   { name = "gleam_erlang", version = "0.23.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "C21CFB816C114784E669FFF4BBF433535EEA9960FA2F216209B8691E87156B96" },
   { name = "gleam_http", version = "3.5.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_http", source = "hex", outer_checksum = "AECDA43AFD523D07A8F09068598A6E271C505278A0CB6F9C7A2E4365EAE8D11E" },
-  { name = "gleam_otp", version = "0.8.0", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_stdlib"], otp_app = "gleam_otp", source = "hex", outer_checksum = "18EF8242A5E54BA92F717C7222F03B3228AEE00D1F286D4C56C3E8C18AA2588E" },
+  { name = "gleam_otp", version = "0.8.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_erlang"], otp_app = "gleam_otp", source = "hex", outer_checksum = "18EF8242A5E54BA92F717C7222F03B3228AEE00D1F286D4C56C3E8C18AA2588E" },
   { name = "gleam_stdlib", version = "0.32.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "ABF00CDCCB66FABBCE351A50060964C4ACE798F95A0D78622C8A7DC838792577" },
   { name = "gleeunit", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "D3682ED8C5F9CAE1C928F2506DE91625588CC752495988CBE0F5653A42A6F334" },
-  { name = "glisten", version = "0.9.2", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_otp", "gleam_erlang"], otp_app = "glisten", source = "hex", outer_checksum = "C960B6CF25D4AABAB01211146E9B57E11827B9C49E4175217E0FB7EF5BCB0FF7" },
-  { name = "mist", version = "0.14.3", build_tools = ["gleam"], requirements = ["gleam_http", "gleam_erlang", "gleam_stdlib", "glisten", "gleam_otp"], otp_app = "mist", source = "hex", outer_checksum = "191F4CC2CFEE55C5DABD04D76E8C191A2ABB9E0C38C6AE504323609FE72899DD" },
+  { name = "glisten", version = "0.9.2", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_otp", "gleam_stdlib"], otp_app = "glisten", source = "hex", outer_checksum = "C960B6CF25D4AABAB01211146E9B57E11827B9C49E4175217E0FB7EF5BCB0FF7" },
+  { name = "mist", version = "0.14.3", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_http", "gleam_stdlib", "glisten", "gleam_otp"], otp_app = "mist", source = "hex", outer_checksum = "191F4CC2CFEE55C5DABD04D76E8C191A2ABB9E0C38C6AE504323609FE72899DD" },
   { name = "nakai", version = "0.8.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "nakai", source = "hex", outer_checksum = "E4BA604229121481776CB4DD42C6E5E7FB1A9BF303D7B1DCDFECFE5FA0B34382" },
   { name = "proquint", version = "1.0.2", build_tools = ["mix"], requirements = [], otp_app = "proquint", source = "hex", outer_checksum = "2BC6FD38EA67E6201B39F55204A184AF3CA98765940374F8EAADF10BCCC78FF3" },
 ]
 
 [requirements]
+chip = { version = "~> 0.1.7" }
 gleam_bbmustache = { version = "~> 2.0" }
 gleam_erlang = { version = "~> 0.23" }
 gleam_http = { version = "~> 3.5" }
-gleam_otp = { version = "~> 0.8.0" }
+gleam_otp = { version = "~> 0.8" }
 gleam_stdlib = { version = "~> 0.32.1" }
 gleeunit = { version = "~> 1.0" }
 mist = { version = "~> 0.14.3" }

@@ -7,7 +7,6 @@ import luster/session
 import luster/web/plant
 import luster/web/payload.{type In, type Out, CSS, Document, Favicon, NotFound}
 
-
 pub fn router(payload: In, session_pid: Subject(session.Message)) -> Out {
   let player_id = "Raúl"
 

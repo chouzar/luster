@@ -1,6 +1,5 @@
-import gleam/bit_string
-import gleam/bit_builder.{type BitBuilder}
-import gleam/bytes_builder.{type BytesBuilder}
+import gleam/bit_array
+import gleam/bytes_builder
 import gleam/map.{type Map}
 import gleam/uri
 import gleam/result
@@ -11,7 +10,7 @@ import luster/web/payload.{
 }
 import luster/web/context
 import luster/web/plant
-import mist.{type Connection, Bytes, ResponseData}
+import mist.{type Connection, type ResponseData, Bytes}
 
 pub fn process_form(
   request: Request(Connection),
@@ -21,7 +20,7 @@ pub fn process_form(
 }
 
 fn decode_uri_string(value: BitArray) -> Map(String, String) {
-  let assert Ok(value) = bit_string.to_string(value)
+  let assert Ok(value) = bit_array.to_string(value)
   let assert Ok(params) = uri.parse_query(value)
   map.from_list(params)
 }
@@ -61,7 +60,7 @@ fn render(mime_type: MIME, document: String) -> response.Response(String) {
   |> response.set_body(document)
 }
 
-fn server_error(error: String) -> response.Response(String) {
+fn server_error(_error: String) -> response.Response(String) {
   response.new(500)
   |> response.set_body("Error rendering component")
 }
@@ -69,8 +68,7 @@ fn server_error(error: String) -> response.Response(String) {
 pub fn to_bit_builder(
   resp: response.Response(String),
 ) -> response.Response(ResponseData) {
-  let response =
-    resp
-    |> response.map(bytes_builder.from_string)
-    |> response.map(Bytes(_))
+  resp
+  |> response.map(bytes_builder.from_string)
+  |> response.map(Bytes(_))
 }
