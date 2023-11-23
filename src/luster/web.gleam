@@ -1,33 +1,14 @@
 import gleam/erlang/process.{type Subject}
-import gleam/bit_builder.{type BitBuilder}
 import gleam/http.{Get, Post}
-import gleam/http/request
-import gleam/http/response
-import mist.{type Connection, ResponseData}
 import luster/util
-import luster/web/middleware
 import luster/web/arcade
 import luster/web/battleline
-import luster/session.{type Message}
+import luster/session
 import luster/web/plant
 import luster/web/payload.{type In, type Out, CSS, Document, Favicon, NotFound}
 
-pub fn service(
-  session_pid: Subject(Message),
-) -> fn(request.Request(Connection)) -> response.Response(ResponseData) {
-  // Starts 1 instance of the session server
 
-  fn(request: request.Request(Connection)) -> response.Response(ResponseData) {
-    request
-    |> middleware.process_form()
-    |> middleware.from_mist_request()
-    |> router(session_pid)
-    |> middleware.into_mist_response()
-    |> middleware.to_bit_builder()
-  }
-}
-
-fn router(payload: In, session_pid: Subject(session.Message)) -> Out {
+pub fn router(payload: In, session_pid: Subject(session.Message)) -> Out {
   let player_id = "Raúl"
 
   case payload.method, payload.path {

@@ -2,6 +2,9 @@
 import gleam/erlang/process
 import luster/web
 import luster/session
+import luster/web/middleware
+import gleam/http/request
+import gleam/http/response
 import mist
 
 //import gleam/erlang/process
@@ -23,7 +26,16 @@ pub fn main() -> Nil {
   let assert Ok(session) = session.start(Nil)
 
   let assert Ok(Nil) =
-    web.service(session)
+    fn(request: request.Request(mist.Connection)) -> response.Response(
+      mist.ResponseData,
+    ) {
+      request
+      |> middleware.process_form()
+      |> middleware.from_mist_request()
+      |> web.router(session)
+      |> middleware.into_mist_response()
+      |> middleware.to_bit_builder()
+    }
     |> mist.new()
     |> mist.port(8088)
     |> mist.start_http()
