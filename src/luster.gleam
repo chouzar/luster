@@ -25,18 +25,19 @@ pub fn main() -> Nil {
   // Starts 1 instance of the session server
   let assert Ok(session) = session.start(Nil)
 
+  let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
+    mist.ResponseData,
+  ) {
+    request
+    |> middleware.process_form()
+    |> middleware.from_mist_request()
+    |> web.router(session)
+    |> middleware.into_mist_response()
+    |> middleware.to_bit_builder()
+  }
+
   let assert Ok(Nil) =
-    fn(request: request.Request(mist.Connection)) -> response.Response(
-      mist.ResponseData,
-    ) {
-      request
-      |> middleware.process_form()
-      |> middleware.from_mist_request()
-      |> web.router(session)
-      |> middleware.into_mist_response()
-      |> middleware.to_bit_builder()
-    }
-    |> mist.new()
+    mist.new(request_pipeline)
     |> mist.port(8088)
     |> mist.start_http()
 
