@@ -1,8 +1,7 @@
 import gleam/list
 import gleam/map.{type Map}
 import gleam/result
-import luster/battleline/board.{type Board}
-import luster/battleline/pieces.{type Card}
+import luster/board.{type Board, type Card}
 
 // TODO: Rummy like card play with the discards
 // TODO: Play cards 3 by 3
@@ -16,6 +15,7 @@ import luster/battleline/pieces.{type Card}
 
 const max_hand_size = 7
 
+// TODO: Remove this concept of player in battleline logic
 pub type Player {
   Player(id: String)
   Computer

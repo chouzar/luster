@@ -1,16 +1,27 @@
-//import gleam/otp/supervisor
 import gleam/erlang/process
-import luster/web
+import gleam/http/request.{type Request}
+import gleam/http/response.{type Response}
 import luster/session
-import luster/web/middleware
-import gleam/http/request
-import gleam/http/response
+import luster/web
 import mist
 
 //import gleam/erlang/process
 
 // TODO: Create a web, games and luster/runtime contexts
 // TODO: Add supervision tree
+
+// TODO: What to fit in the context?
+// * Different types on the parameters received from the router.
+//   * Param decoding could happen in this module.
+//   * Param decoding could happen depending on the header.
+//     * Form data should be decoded accordingly.
+// * Game state already loaded from store.
+// * Different actions decoded from the parameters received from the router.
+//   * Show(state: GameState, player_id: String).
+//     | DrawCard(GameState, player_id: String).
+//pub type Context {
+//  None
+//}
 
 pub fn main() -> Nil {
   // TODO: Add a proper supervision tree
@@ -25,20 +36,15 @@ pub fn main() -> Nil {
   // Starts 1 instance of the session server
   let assert Ok(session) = session.start(Nil)
 
-  let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
+  let request_pipeline = fn(request: Request(mist.Connection)) -> Response(
     mist.ResponseData,
   ) {
-    request
-    |> middleware.process_form()
-    |> middleware.from_mist_request()
-    |> web.router(session)
-    |> middleware.into_mist_response()
-    |> middleware.to_bit_builder()
+    web.router(request, session)
   }
 
   let assert Ok(Nil) =
     mist.new(request_pipeline)
-    |> mist.port(8088)
+    |> mist.port(4444)
     |> mist.start_http()
 
   process.sleep_forever()

@@ -1,5 +1,5 @@
-import gleam/map.{type Map}
 import gleam/erlang/process.{type Subject}
+import gleam/map.{type Map}
 import gleam/otp/actor.{type Next, type StartError, Stop}
 import luster/battleline.{type GameState}
 

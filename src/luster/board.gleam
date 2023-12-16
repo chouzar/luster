@@ -2,9 +2,8 @@ import gleam/int
 import gleam/list
 import gleam/map.{type Map}
 import gleam/option.{type Option, None, Some}
-import gleam/result
 import gleam/order.{type Order, Eq, Gt, Lt}
-import luster/battleline/pieces.{type Card, Club, Diamond, Heart, Normal, Spade}
+import gleam/result
 
 pub type Player {
   Player1
@@ -25,12 +24,15 @@ pub type Slot {
 
 const slots = [Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8, Slot9]
 
-type Formation {
-  ThreeSuitsInSequence
-  ThreeRanks
-  ThreeInSequence
-  ThreeSuits
-  HighCard
+pub type Suit {
+  Spade
+  Heart
+  Diamond
+  Club
+}
+
+pub type Card {
+  Normal(rank: Int, suit: Suit)
 }
 
 type Pile =
@@ -50,6 +52,14 @@ type Flag =
 
 type Hand =
   List(Card)
+
+type Formation {
+  ThreeSuitsInSequence
+  ThreeRanks
+  ThreeInSequence
+  ThreeSuits
+  HighCard
+}
 
 pub opaque type Board {
   Board(
