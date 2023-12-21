@@ -8,6 +8,7 @@ type State {
 }
 
 pub type Message {
+  All(caller: Subject(List(String)))
   SetSession(id: String, session: GameState)
   GetSession(caller: Subject(GameState), id: String)
   Close
@@ -15,6 +16,10 @@ pub type Message {
 
 pub fn start(_: Nil) -> Result(Subject(Message), StartError) {
   actor.start(State(map.new()), handle)
+}
+
+pub fn all(subject: Subject(Message)) -> List(String) {
+  actor.call(subject, All(_), 100)
 }
 
 pub fn get(subject: Subject(Message), id: String) -> GameState {
@@ -34,6 +39,11 @@ pub fn close(subject: Subject(Message)) -> Nil {
 
 fn handle(message: Message, state: State) -> Next(Message, State) {
   case message {
+    All(caller) -> {
+      let ids = map.keys(state.sessions)
+      let Nil = actor.send(caller, ids)
+      actor.continue(state)
+    }
     SetSession(id, game_state) ->
       state.sessions
       |> map.insert(id, game_state)

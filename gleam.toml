@@ -19,6 +19,7 @@ proquint = "~> 1.0"
 nakai = "~> 0.8.0"
 gleam_http = "~> 3.5"
 gleam_erlang = "~> 0.23"
+chip = "~> 0.1"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"

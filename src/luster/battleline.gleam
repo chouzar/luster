@@ -15,19 +15,8 @@ import luster/board.{type Board, type Card}
 
 const max_hand_size = 7
 
-// TODO: Remove this concept of player in battleline logic
-pub type Player {
-  Player(id: String)
-  Computer
-}
-
 pub opaque type GameState {
-  GameState(
-    phase: Phase,
-    board: Board,
-    sequence: List(Player),
-    association: Map(Player, board.Player),
-  )
+  GameState(phase: Phase, board: Board, sequence: List(board.Player))
 }
 
 type Phase {
@@ -45,26 +34,21 @@ pub type Errors {
 
 // ACTIONS API
 
-/// Creates a new state with initial defaults
-pub fn new(p1 p1: Player, p2 p2: Player) -> GameState {
+pub fn new() -> GameState {
   GameState(
     phase: InitialDraw,
     board: board.new(),
-    sequence: list.shuffle([p1, p2]),
-    association: map.new()
-    |> map.insert(p1, board.Player1)
-    |> map.insert(p2, board.Player2),
+    sequence: list.shuffle([board.Player1, board.Player2]),
   )
 }
 
 /// Player draws a card during the Initial Draw phase 
 pub fn initial_draw(
   state: GameState,
-  of player: Player,
+  of player: board.Player,
 ) -> Result(GameState, Errors) {
   Ok(state)
   |> result.then(check_phase(_, InitialDraw))
-  |> result.then(check_current_player(_, player))
   |> result.then(board_draw_card(_, player))
   |> result.map(next_phase)
 }
@@ -72,7 +56,7 @@ pub fn initial_draw(
 /// Player claims a flag during the Claim Flag phase
 pub fn claim_flag(
   state: GameState,
-  of player: Player,
+  of player: board.Player,
   at slot: board.Slot,
 ) -> Result(GameState, Errors) {
   Ok(state)
@@ -85,7 +69,7 @@ pub fn claim_flag(
 /// Player plays a card during the Play Card phase
 pub fn play_card(
   state: GameState,
-  of player: Player,
+  of player: board.Player,
   with card: Card,
   at slot: board.Slot,
 ) -> Result(GameState, Errors) {
@@ -99,7 +83,7 @@ pub fn play_card(
 /// Player draws a card during the Draw phase
 pub fn replentish_hand(
   state: GameState,
-  of player: Player,
+  of player: board.Player,
 ) -> Result(GameState, Errors) {
   Ok(state)
   |> result.then(check_phase(_, Draw))
@@ -112,8 +96,7 @@ pub fn replentish_hand(
 // GAMESTATE INTROSPECTION API
 
 /// Retrieves a player's full hand
-pub fn hand(state: GameState, of player: Player) -> List(Card) {
-  let player = get(state.association, player)
+pub fn hand(state: GameState, of player: board.Player) -> List(Card) {
   board.hand(state.board, of: player)
 }
 
@@ -126,10 +109,8 @@ pub fn deck_size(state: GameState) -> Int {
 
 fn board_draw_card(
   state: GameState,
-  player: Player,
+  player: board.Player,
 ) -> Result(GameState, Errors) {
-  let player = get(state.association, player)
-
   case board.draw(state.board, player) {
     Ok(board) -> Ok(GameState(..state, board: board))
     Error(error) -> Error(Board(error))
@@ -138,11 +119,9 @@ fn board_draw_card(
 
 fn board_claim_flag(
   state: GameState,
-  player: Player,
+  player: board.Player,
   slot: board.Slot,
 ) -> Result(GameState, Errors) {
-  let player = get(state.association, player)
-
   case board.claim_flag(state.board, of: player, at: slot) {
     Ok(board) -> Ok(GameState(..state, board: board))
     Error(error) -> Error(Board(error))
@@ -151,12 +130,10 @@ fn board_claim_flag(
 
 fn board_play_card(
   state: GameState,
-  player: Player,
+  player: board.Player,
   card: Card,
   slot: board.Slot,
 ) -> Result(GameState, Errors) {
-  let player = get(state.association, player)
-
   case board.play(state.board, with: card, of: player, at: slot) {
     Ok(board) -> Ok(GameState(..state, board: board))
     Error(error) -> Error(Board(error))
@@ -172,7 +149,7 @@ fn check_phase(state: GameState, phase: Phase) -> Result(GameState, Errors) {
 
 fn check_current_player(
   state: GameState,
-  player: Player,
+  player: board.Player,
 ) -> Result(GameState, Errors) {
   case first(state.sequence) {
     current if current == player -> Ok(state)
@@ -185,7 +162,6 @@ fn next_phase(state: GameState) -> GameState {
     InitialDraw -> {
       let are_hands_complete =
         state.sequence
-        |> list.map(fn(player) { get(state.association, player) })
         |> list.map(fn(board_player) {
           board.hand(state.board, of: board_player)
         })
@@ -204,11 +180,6 @@ fn next_phase(state: GameState) -> GameState {
 
 fn next_player(state: GameState) -> GameState {
   GameState(..state, sequence: rotate(state.sequence))
-}
-
-fn get(map: Map(key, value), key: key) -> value {
-  let assert Ok(value) = map.get(map, key)
-  value
 }
 
 fn first(list: List(x)) -> x {

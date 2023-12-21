@@ -4,73 +4,110 @@ import gleam/http.{Get, Post}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/string
-import luster/battleline.{Player}
-import luster/board.{type Card, Club, Diamond, Heart, Spade}
+import gleam/map.{type Map}
+import gleam/uri
+import gleam/bit_array
+import luster/battleline
+import luster/board
 import luster/session.{type Message}
 import mist
 import nakai
-import nakai/html.{type Node, Body, Element, Head, Html, Text}
+import nakai/html.{type Node, Body, Element, Fragment, Head, Html, Text}
 import nakai/html/attrs
+import gleam/io
 
+// TODO: Move registry and session to a context 
 pub fn router(
   request: Request(mist.Connection),
+  registry,
   session,
 ) -> Response(mist.ResponseData) {
-  let player_id = "Raúl"
   let path = request.path_segments(request)
 
   case request.method, path {
     Get, [] -> {
-      let document = layout([index()])
+      let document = layout(page_index(session))
       render(document)
     }
 
     Post, ["battleline"] -> {
-      let id = new_battleline(session, player_id)
+      let id = new_battleline(session)
       redirect("/battleline/" <> id)
     }
 
     Get, ["battleline", session_id] -> {
       let state = session.get(session, session_id)
 
-      let document = layout(board([], state, session_id, player_id))
+      let document = layout(page_board([], state, session_id))
 
       render(document)
     }
 
     Post, ["battleline", session_id, "draw-card"] -> {
+      // TODO: Move this to middleware 
+      // TODO: Middleware to have actions
+      let params = process_form(request)
+
+      let assert Ok(player) = map.get(params, "playerId")
+
+      let player = case player {
+        "Player1" -> board.Player1
+        "Player2" -> board.Player2
+      }
+
       let state = session.get(session, session_id)
 
-      case battleline.initial_draw(state, of: Player(player_id)) {
+      case battleline.initial_draw(state, of: player) {
         Ok(state) -> {
           let assert Nil = session.set(session, session_id, state)
 
-          let document = layout(board([], state, session_id, player_id))
+          let document = layout(page_board([], state, session_id))
 
           render(document)
         }
 
         Error(error) -> {
           let document =
-            layout(board([board_error(error)], state, session_id, player_id))
+            layout(page_board([board_error(error)], state, session_id))
 
           render(document)
         }
       }
     }
 
-    Get, ["assets", ..] -> serve_assets(request)
-    _, _ -> not_found()
+    Post, ["battleline", session_id, "claim-flag"] -> {
+      todo
+    }
+
+    Post, ["battleline", session_id, "select-card"] -> {
+      // TODO: Move this to middleware 
+      // Detect form data header
+      // Detect params in body
+      // Detect fields to build selections
+      let params = process_form(request)
+
+      io.debug(params)
+      todo
+    }
+
+    Post, ["battleline", session_id, "play-card"] -> {
+      todo
+    }
+
+    Get, ["assets", ..] -> {
+      serve_assets(request)
+    }
+
+    _, _ -> {
+      not_found()
+    }
   }
 }
 
-fn new_battleline(session_pid: Subject(Message), player_id: String) -> String {
-  let p1 = battleline.Player(player_id)
-  let p2 = battleline.Computer
-  let state = battleline.new(p1, p2)
+fn new_battleline(session_pid: Subject(Message)) -> String {
+  let state = battleline.new()
 
   let id = proquint_triplet()
   let assert Nil = session.set(session_pid, id, state)
@@ -91,7 +128,7 @@ fn board_error(error: battleline.Errors) -> Alert {
 
 // HTML Pages and components
 
-fn layout(body: List(Node(a))) -> Node(a) {
+fn layout(body: Node(a)) -> Node(a) {
   Html(
     [],
     [
@@ -109,7 +146,7 @@ fn layout(body: List(Node(a))) -> Node(a) {
           attrs.href("/assets/styles.css"),
         ]),
       ]),
-      Body([], body),
+      Body([], [body]),
     ],
   )
   //script("/assets/hotwired-turbo.js"),
@@ -123,71 +160,45 @@ fn script(source: String) {
   )
 }
 
-fn index() -> Node(a) {
-  html.form(
-    [attrs.method("post"), attrs.action("/battleline")],
-    [html.input([attrs.type_("submit"), attrs.value("Play Line-Poker")])],
-  )
+fn page_index(session) -> Node(a) {
+  let ids = session.all(session)
+
+  Fragment([
+    html.form(
+      [attrs.method("post"), attrs.action("/battleline")],
+      [html.input([attrs.type_("submit"), attrs.value("Play Line-Poker")])],
+    ),
+    html.ol(
+      [],
+      list.map(
+        ids,
+        fn(id) {
+          html.li([], [html.a_text([attrs.href("/battleline/" <> id)], id)])
+        },
+      ),
+    ),
+  ])
 }
 
-fn board(
+fn page_board(
   alerts: List(Alert),
   state: battleline.GameState,
   session_id: String,
-  player_id: String,
-) -> List(Node(a)) {
-  let hand = battleline.hand(state, of: Player(player_id))
-  let size = battleline.deck_size(state)
-  let alerts = list.map(alerts, alert)
+) -> Node(a) {
+  let p1_hand = battleline.hand(state, of: board.Player1)
+  let p2_hand = battleline.hand(state, of: board.Player2)
+  let alerts = list.map(alerts, component_alert)
 
-  [
-    html.form(
-      [
-        attrs.id("draw-card"),
-        attrs.method("post"),
-        attrs.action("/battleline/" <> session_id <> "/draw-card"),
-      ],
-      [
-        html.input([
-          attrs.type_("hidden"),
-          attrs.name("player-id"),
-          attrs.value(player_id),
-        ]),
-      ],
-    ),
+  Fragment([
     html.section([attrs.id("alert-message"), attrs.class("alerts")], alerts),
     html.div(
       [attrs.class("board")],
       [
-        html.div(
-          [attrs.class("deck")],
-          [
-            html.section(
-              [attrs.class("draw-pile")],
-              [
-                html.button(
-                  [attrs.id("odd-pile"), attrs.formaction("draw-card")],
-                  draw_deck(Clouds, size),
-                ),
-              ],
-            ),
-          ],
-        ),
+        draw_card_pile(state, session_id, board.Player2),
         html.div(
           [attrs.class("line")],
           [
-            html.section(
-              [attrs.class("hand")],
-              [
-                html.div([attrs.class("card back clouds")], []),
-                html.div([attrs.class("card back clouds")], []),
-                html.div([attrs.class("card back clouds")], []),
-                html.div([attrs.class("card back clouds")], []),
-                html.div([attrs.class("card back clouds")], []),
-                html.div([attrs.class("card back clouds")], []),
-                html.div([attrs.class("card back clouds")], []),
-              ],
-            ),
+            player_hand(state, session_id, board.Player2),
             html.section(
               [attrs.class("battleline")],
               [
@@ -202,29 +213,100 @@ fn board(
                 html.div([attrs.class("card back diamonds")], []),
               ],
             ),
-            html.section(
-              [attrs.id("player-hand"), attrs.class("hand")],
-              player_hand(hand),
-            ),
+            player_hand(state, session_id, board.Player1),
           ],
         ),
-        html.div(
-          [attrs.class("deck")],
-          [
-            html.section(
-              [attrs.class("draw-pile")],
-              [
-                html.button(
-                  [attrs.id("draw-pile"), attrs.Attr("form", "draw-card")],
-                  draw_deck(Diamonds, size),
-                ),
-              ],
-            ),
-          ],
-        ),
+        draw_card_pile(state, session_id, board.Player1),
       ],
     ),
-  ]
+  ])
+}
+
+fn draw_card_pile(
+  state: battleline.GameState,
+  session_id: String,
+  player: board.Player,
+) -> Node(a) {
+  let player = case player {
+    board.Player1 -> "Player1"
+    board.Player2 -> "Player2"
+  }
+
+  let size = battleline.deck_size(state)
+
+  html.div(
+    [attrs.class("deck")],
+    [
+      html.section(
+        [attrs.class("draw-pile")],
+        [
+          button(
+            "/battleline/" <> session_id <> "/draw-card",
+            [#("playerId", player)],
+            component_draw_deck(Diamonds, size),
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
+fn player_hand(
+  state: battleline.GameState,
+  session_id: String,
+  player: board.Player,
+) -> Node(a) {
+  let hand = battleline.hand(state, of: player)
+
+  let player_id = case player {
+    board.Player1 -> "Player1"
+    board.Player2 -> "Player2"
+  }
+
+  html.section(
+    [attrs.class("hand")],
+    list.map(
+      hand,
+      fn(card: board.Card) {
+        let rank = int.to_string(card.rank)
+        let suit = case card.suit {
+          board.Spade -> "spade"
+          board.Heart -> "heart"
+          board.Diamond -> "diamond"
+          board.Club -> "club"
+        }
+
+        button(
+          "/battleline/" <> session_id <> "/select-card",
+          [#("playerId", player_id), #("rank", rank), #("suit", suit)],
+          component_card_front(card),
+        )
+      },
+    ),
+  )
+}
+
+fn button(
+  action: String,
+  params: List(#(String, String)),
+  element: Node(a),
+) -> Node(a) {
+  html.form(
+    [attrs.method("post"), attrs.action(action)],
+    [
+      Fragment(list.map(
+        params,
+        fn(param) {
+          html.input([
+            attrs.type_("hidden"),
+            attrs.name(param.0),
+            attrs.value(param.1),
+          ])
+        },
+      )),
+      html.button([], [element]),
+    ],
+  )
 }
 
 type Alert {
@@ -234,7 +316,7 @@ type Alert {
   Wrong(message: String)
 }
 
-fn alert(alert: Alert) -> Node(a) {
+fn component_alert(alert: Alert) -> Node(a) {
   let color = case alert {
     Success(_) -> "success"
     Info(_) -> "info"
@@ -253,19 +335,19 @@ pub type Background {
   Diamonds
 }
 
-fn card_front(card: Card) -> Node(a) {
+fn component_card_front(card: board.Card) -> Node(a) {
   let suit = case card.suit {
-    Spade -> "♠"
-    Heart -> "♥"
-    Diamond -> "♦"
-    Club -> "♣"
+    board.Spade -> "♠"
+    board.Heart -> "♥"
+    board.Diamond -> "♦"
+    board.Club -> "♣"
   }
 
   let color = case card.suit {
-    Spade -> "blue"
-    Heart -> "red"
-    Diamond -> "green"
-    Club -> "purple"
+    board.Spade -> "blue"
+    board.Heart -> "red"
+    board.Diamond -> "green"
+    board.Club -> "purple"
   }
 
   let rank = int.to_string(card.rank)
@@ -286,7 +368,7 @@ fn card_front(card: Card) -> Node(a) {
   )
 }
 
-fn card_back(back: Background) -> Node(a) {
+fn component_card_back(back: Background) -> Node(a) {
   let background = case back {
     Clouds -> "clouds"
     Diamonds -> "diamonds"
@@ -295,7 +377,7 @@ fn card_back(back: Background) -> Node(a) {
   html.div([attrs.class("card back " <> background)], [])
 }
 
-fn draw_deck(back: Background, size: Int) -> List(Node(a)) {
+fn component_draw_deck(back: Background, size: Int) -> Node(a) {
   let count = case size {
     x if x > 48 -> 13
     x if x > 44 -> 12
@@ -313,12 +395,8 @@ fn draw_deck(back: Background, size: Int) -> List(Node(a)) {
     0 -> 0
   }
 
-  let card = card_back(back)
-  list.repeat(card, count)
-}
-
-fn player_hand(hand: List(Card)) -> List(Node(a)) {
-  list.map(hand, card_front)
+  let card = component_card_back(back)
+  html.div([], list.repeat(card, count))
 }
 
 // Server middleware helpers
@@ -371,6 +449,17 @@ fn not_found() -> Response(mist.ResponseData) {
   |> response.set_body(mist.Bytes(body))
 }
 
+fn process_form(request: Request(mist.Connection)) -> Map(String, String) {
+  let assert Ok(request) = mist.read_body(request, 50)
+  decode_uri_string(request.body)
+}
+
+fn decode_uri_string(value: BitArray) -> Map(String, String) {
+  let assert Ok(value) = bit_array.to_string(value)
+  let assert Ok(params) = uri.parse_query(value)
+  map.from_list(params)
+}
+
 // https://www.iana.org/assignments/media-types/media-types.xhtml
 type MIME {
   HTML
@@ -395,7 +484,6 @@ fn extract_mime(path: String) -> MIME {
     path
     |> string.lowercase()
     |> extension()
-    |> io.debug()
 
   case ext {
     ".css" -> CSS

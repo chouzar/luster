@@ -1,3 +1,4 @@
+import chip
 import gleam/erlang/process
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
@@ -36,10 +37,13 @@ pub fn main() -> Nil {
   // Starts 1 instance of the session server
   let assert Ok(session) = session.start(Nil)
 
+  // Starts 1 instance of the registry
+  let assert Ok(registry) = chip.start()
+
   let request_pipeline = fn(request: Request(mist.Connection)) -> Response(
     mist.ResponseData,
   ) {
-    web.router(request, session)
+    web.router(request, registry, session)
   }
 
   let assert Ok(Nil) =
