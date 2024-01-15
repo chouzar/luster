@@ -12,14 +12,13 @@ gleam = ">= 0.32.0"
 
 [dependencies]
 gleam_stdlib = "~> 0.32.1"
-gleam_otp = "~> 0.8"
-mist = "~> 0.14.3"
-gleam_bbmustache = "~> 2.0"
-proquint = "~> 1.0"
-nakai = "~> 0.8.0"
-gleam_http = "~> 3.5"
 gleam_erlang = "~> 0.23"
-chip = "~> 0.1"
+gleam_otp = "~> 0.8"
+gleam_http = "~> 3.5"
+mist = "~> 0.14.3"
+wisp = "~> 0.8"
+nakai = "~> 0.8.0"
+#envoy = "~> 1.0"
 
 [dev-dependencies]
 gleeunit = "~> 1.0"

@@ -4,6 +4,16 @@ body {
   background-color: #f0f1ff;
 }
 
+.outline {
+  outline-color: red;
+  outline-width: 5px;
+  outline-style: solid;
+}
+
+.lobby-games {
+ list-style: none; 
+}
+
 .alerts {
   display: flex;
   flex-direction: column;
