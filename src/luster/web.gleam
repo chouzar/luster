@@ -29,29 +29,25 @@ pub fn pipeline(
   //use context <- web.set_store(registry)
   // Fetch from database
 
-  router(request, context)
+  use _request <- router(request, context)
+
+  wisp.response(400)
 }
 
 pub fn router(
   request: wisp.Request,
   context: Context(game.Model),
+  next: fn(wisp.Request) -> wisp.Response,
 ) -> wisp.Response {
-  case wisp.path_segments(request) {
-    [] -> home(request, context)
-    ["battleline", ..] -> game(request, context)
-  }
-}
-
-fn home(request: wisp.Request, context: Context(game.Model)) -> wisp.Response {
-  let records = store.all(context.store)
-
-  home.Model(records)
-  |> home.view()
-  |> render(with: layout)
-}
-
-fn game(request: wisp.Request, context: Context(game.Model)) -> wisp.Response {
   case request.method, wisp.path_segments(request) {
+    http.Get, [] -> {
+      let records = store.all(context.store)
+
+      home.Model(records)
+      |> home.view()
+      |> render(with: layout)
+    }
+
     http.Post, ["battleline"] -> {
       let model = game.init()
       let _id = store.create(context.store, model)
@@ -82,7 +78,7 @@ fn game(request: wisp.Request, context: Context(game.Model)) -> wisp.Response {
     }
 
     _, _ -> {
-      todo as "Not found."
+      next(request)
     }
   }
 }

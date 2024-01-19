@@ -3,6 +3,7 @@ import luster/web
 import luster/store
 import mist
 import wisp
+import luster/web/pages/game
 
 //import gleam/erlang/process
 // TODO: Rename this project as card-field, line-poker, battle-group
@@ -25,6 +26,8 @@ pub fn main() -> Nil {
   let assert Ok(store) = store.start()
 
   let context = web.Context(store: store, assets_path: priv("/assets"))
+
+  store.create(store, game.init())
 
   let assert Ok(Nil) =
     wisp.mist_handler(web.pipeline(_, context), secret_key_base)

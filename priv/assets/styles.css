@@ -1,17 +1,33 @@
+:root {
+  --white: #ffffff;
+  --gray: #b0b0b0;
+  --light-blue: #4483d529;
+  --dark-blue: #4483d5ab;
+  --font-blue: #4483d5;
+  --light-red: #ffc0ef45;
+  --dark-red: #d544a3ab;
+  --font-red: #d544a3;
+  --dubious-light-green: #b7cc91ad;
+  --dubious-dark-green: #436c3b99;
+  --light-green: #eaffdd85;
+  --dark-green: #b0dd96c4;
+}
+
 body {
   margin: 0;
   padding: 0;
   background-color: #f0f1ff;
 }
 
-.outline {
-  outline-color: red;
-  outline-width: 5px;
-  outline-style: solid;
+.lobby-games {
+  list-style: none;
 }
 
-.lobby-games {
- list-style: none; 
+button {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
 .alerts {
@@ -56,10 +72,10 @@ body {
   height: 96vh;
 }
 
-.board>.line {
+.board>.field {
   display: flex;
   flex-direction: column;
-  flex-grow: 8;
+  flex-grow: 0;
 }
 
 .board>.deck {
@@ -69,7 +85,7 @@ body {
   align-items: center;
 }
 
-.board>.line>.hand {
+.board>.field>.hand {
   display: flex;
   flex-direction: row;
   flex-grow: 2;
@@ -77,8 +93,66 @@ body {
   align-items: center;
 }
 
+.board>.field>.scores {
+  display: flex;
+  flex-direction: row;
+}
 
-.board>.line>.battleline {
+.board>.field>.scores>.score {
+  outline: 1px solid var(--gray);
+  background-color: var(--white);
+  height: 3vh;
+  width: 7.5vh;
+  border-radius: 0.25vh;
+  margin: 4px;
+  padding: 5px;
+  display: flex;
+  flex-direction: row;
+  flex-grow: 0;
+  justify-content: space-evenly;
+  align-items: center;
+  font-size: 1.25vh;
+  font-family: arial;
+}
+
+.board>.field>.scores.general>.score {
+  justify-content: space-between;
+}
+
+.board>.field>.scores>.score.player-1 {
+  outline: 3px solid var(--dark-blue);
+  color: var(--font-blue);
+}
+
+.board>.field>.scores>.score.player-2 {
+  outline: 3px solid var(--dark-red);
+  color: var(--font-red);
+}
+
+.board>.field>.scores>.score>.formation {
+  color: #4d8848;
+}
+
+.board>.field>.flags {
+  display: flex;
+  flex-direction: row;
+}
+
+.board>.field>.flags>.flag {
+  outline: 1px solid black;
+  height: 4vh;
+  width: 7.5vh;
+  border-radius: 0.25vh;
+  margin: 4px;
+  padding: 5px;
+  display: flex;
+  flex-direction: row;
+  flex-grow: 0;
+  justify-content: center;
+  align-items: center;
+}
+
+.board>.field>.battleline {
   display: flex;
   flex-direction: row;
   flex-grow: 6;
@@ -93,13 +167,62 @@ body {
   margin: 1vh;
 }
 
+
+.board>.field>.slots {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 0;
+}
+
+.board>.field>.slots .slot {
+  position: relative;
+  background-color: var(--light-green);
+  outline-color: var(--dark-green);
+  outline-style: solid;
+  outline-width: 2px;
+  height: 220px;
+  width: 7.5vh;
+  border-radius: 0.25vh;
+  margin: 4px;
+  padding: 5px;
+}
+
+.slot>.card.front {
+  position: absolute;
+}
+
+.player-2.slot>.card:nth-child(1) {
+  bottom: 5px;
+}
+
+.player-2.slot>.card:nth-child(2) {
+  bottom: 48px;
+}
+
+.player-2.slot>.card:nth-child(3) {
+  bottom: 91px;
+}
+
+.player-1.slot>.card:nth-child(1) {
+  top: 5px;
+}
+
+.player-1.slot>.card:nth-child(2) {
+  top: 48px;
+}
+
+.player-1.slot>.card:nth-child(3) {
+  top: 91px;
+}
+
 .card {
   outline: 1px solid black;
   /* standard size card 3.5in by 2.5in */
   height: 10.5vh;
   width: 7.5vh;
   border-radius: 0.75vh;
-  margin: 3px;
+  margin: 0px;
+  padding: 0px;
 }
 
 .card.red {
@@ -120,8 +243,6 @@ body {
 
 .card.front {
   position: relative;
-  margin: 0.5vh;
-  padding: 0;
   display: flex;
   justify-content: center;
   background-color: white;
@@ -154,7 +275,6 @@ body {
   margin: 0.25em;
   font-size: 1em;
 }
-
 .draw-pile .card {
   position: absolute;
   margin: 0px;
@@ -229,59 +349,40 @@ body {
   margin: 6px;
 }
 
-.card.clouds {
-  outline: 1px solid #604848;
+.card.sparkle {
+  outline: 1px solid #d070b8;
 }
 
-.card.back.clouds {
-  outline: 1px solid #604848;
-
-  /* from https://codepen.io/t_afif/pen/QWrpmYz */
-  --s: 1.5vh;
-  /* control the size */
-  --c1: #CCBF82;
-  --c2: #604848;
-
-  --_g: var(--c1) 6.2%, var(--c2) 6.3% 18.7%, var(--c1) 18.8% 31.2%,
-    var(--c2) 31.3% 43.7%, var(--c1) 43.8% 56.2%, var(--c2) 56.3% 68.7%, #0000 68.8%;
+/* took inspiration from https://codepen.io/apo11oCreed/pen/WNEgJE */
+/* and https://gleam.run easter egg :sparkles: */
+.card.back.sparkle {
   background:
-    radial-gradient(var(--s) at 100% 0, var(--_g)),
-    radial-gradient(var(--s) at 0 0, var(--_g)),
-    radial-gradient(var(--s) at 0 100%, var(--_g)),
-    radial-gradient(var(--s) at 100% 100%, var(--_g)) var(--c1);
-  background-size: var(--s) var(--s);
+    repeating-linear-gradient(
+      40deg,
+      #ffd596 1em,
+      #ffd596 2em,
+      #fdffab 2em,
+      #fdffab 3em,
+      #c8ffa7 3em,
+      #c8ffa7 4em,
+      #9ce7ff 4em,
+      #9ce7ff 5em,
+      #dcd2fb 5em,
+      #dcd2fb 6em
+    ),
+    repeating-linear-gradient(
+      -75deg,
+      #ffd596 1em,
+      #ffd596 2em,
+      #fdffab 2em,
+      #fdffab 3em,
+      #c8ffa7 3em,
+      #c8ffa7 4em,
+      #9ce7ff 4em,
+      #9ce7ff 5em,
+      #dcd2fb 5em,
+      #dcd2fb 6em
+    );
+    
+  background-blend-mode: multiply;
 }
-
-.card.diamonds {
-  outline: 1px solid #88A65E;
-}
-
-.card.back.diamonds {
-  /* from https://codepen.io/t_afif/pen/NWzEVgW */
-  --s: 0.75vh;
-  /* control the size */
-  --b: 0.30vh;
-  /* control the thickness of the curved lines */
-
-  --_r: calc(1.28*var(--s) + var(--b)/2) at top 50%;
-  --_f: calc(99.5% - var(--b)), #F9F2E7 calc(101% - var(--b)) 99.5%, #0000 101%;
-  --_g0: calc(-.8*var(--s)), #88A65E var(--_f);
-  --_g1: calc(-.8*var(--s)), #BFB35A var(--_f);
-  --_s: calc(1.8*var(--s) + var(--b));
-  background:
-    radial-gradient(var(--_r) right var(--_g0)) calc(-1*var(--_s)) var(--s),
-    radial-gradient(var(--_r) left var(--_g1)) var(--_s) calc(-1*var(--s)),
-    radial-gradient(var(--_r) right var(--_g1)) calc(var(--_s)/-2) calc(-1*var(--s)),
-    radial-gradient(var(--_r) left var(--_g0)) calc(var(--_s)/ 2) var(--s),
-    linear-gradient(90deg, #88A65E 50%, #BFB35A 0);
-  background-size: var(--_s) calc(4*var(--s));
-}
-
-/* Other styles 
-https://codepen.io/leemark/pen/kQJJZm
-https://codepen.io/yoksel/pen/nbPjOZ
-https://codepen.io/yoksel/pen/ANZBzJ
-https://codepen.io/yoksel/pen/nJgdbx
-https://codepen.io/yoksel/pen/ANQrNz
-https://codepen.io/apo11oCreed/pen/WNEgJE
-*/
