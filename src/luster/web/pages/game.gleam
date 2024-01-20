@@ -87,6 +87,19 @@ pub fn view(model: Model) -> html.Node(a) {
       [
         html.div([attrs.class("scoring")], [scoring_table()]),
         html.div(
+          [],
+          [
+            html.div_text(
+              [],
+              case cf.score_total(model.gamestate) {
+                #(Some(cf.Player1), total) -> int.to_string(total)
+                #(Some(cf.Player2), total) -> int.to_string(total)
+                #(None, total) -> int.to_string(total)
+              },
+            ),
+          ],
+        ),
+        html.div(
           [attrs.class("field")],
           [
             view_hand(model.gamestate, cf.Player2),
@@ -215,16 +228,33 @@ fn view_score_columns(state: cf.GameState, player: cf.Player) -> html.Node(a) {
     [attrs.class("scores")],
     {
       use score <- list.map(scores)
-      let card = int.to_string(score.card_score)
-      let formation = int.to_string(score.formation_bonus)
+      let card = int.to_string(score.score)
+      let formation = int.to_string(score.formation)
+      let flank = int.to_string(score.flank)
+
+      let card = [html.span_text([attrs.class("unit")], card)]
+
+      let formation = case score.formation {
+        0 -> []
+
+        _ -> [
+          html.span_text([attrs.class("formation")], " + "),
+          html.span_text([attrs.class("formation")], formation),
+        ]
+      }
+
+      let flank = case score.flank {
+        0 -> []
+
+        _ -> [
+          html.span_text([attrs.class("flank")], " + "),
+          html.span_text([attrs.class("flank")], flank),
+        ]
+      }
 
       html.div(
         [attrs.class("score" <> " " <> player)],
-        [
-          html.span_text([attrs.class("unit")], card),
-          html.span_text([], " + "),
-          html.span_text([attrs.class("formation")], formation),
-        ],
+        list.concat([card, formation, flank]),
       )
     },
   )
