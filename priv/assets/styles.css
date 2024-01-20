@@ -6,11 +6,12 @@
   --font-blue: #4483d5;
   --light-red: #ffc0ef45;
   --dark-red: #d544a3ab;
-  --font-red: #d544a3;
-  --dubious-light-green: #b7cc91ad;
-  --dubious-dark-green: #436c3b99;
   --light-green: #eaffdd85;
   --dark-green: #b0dd96c4;
+  --font-red: #d544a3;
+  --font-purple: #4f40ffc9;
+  --dubious-light-green: #b7cc91ad;
+  --dubious-dark-green: #436c3b99;
 }
 
 body {
@@ -156,6 +157,10 @@ table tr {
 
 .board>.field>.scores>.score>.formation {
   color: #4d8848;
+}
+
+.board>.field>.scores>.score>.flank {
+  color: var(--font-purple);
 }
 
 .board>.field>.flags {

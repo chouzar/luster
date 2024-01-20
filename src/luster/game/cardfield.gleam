@@ -5,17 +5,23 @@ import gleam/option.{type Option, None, Some}
 import gleam/order.{type Order}
 import gleam/result.{try}
 
-// IDEA: Add rummy like card play with discards
-// IDEA: Create basic computer players 
-// IDEA: Remove 3 card limit for colums, have a diff trigger for countdown
-// IDEA: Counter mechanic, being able to "steal" a card and place elsewhere
-// IDEA: Add sprites with animations instead of ranks
-
 const max_hand_size = 8
 
 const plays_per_turn = 4
 
-const slots = [Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8, Slot9]
+const straight_flush = StraightFlush(11)
+
+const three_of_a_kind = ThreeOfAKind(7)
+
+const straight = Straight(5)
+
+const flush = Flush(3)
+
+const pair = Pair(1)
+
+const flank_bonus = 1
+
+const highcard = HighCard
 
 const ranks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
@@ -53,13 +59,6 @@ pub type Player {
 type Line(piece) =
   Map(Slot, piece)
 
-// TODO: Win condition
-// * When player cannot draw from deck we go to scoring
-//   - Flank Bonus: 
-//     +3 for adjacent winning tiles
-// TODO: A slot should probably contain a set of cards
-// Data structure should bi a list of ordered slots 
-// that contains a list of cards each one.
 pub type Slot {
   Slot1
   Slot2
@@ -89,12 +88,12 @@ type Battle =
 type Column =
   List(Card)
 
-pub type Formation {
-  StraightFlush
-  ThreeOfAKind
-  Straight
-  Flush
-  Pair
+type Formation {
+  StraightFlush(Int)
+  ThreeOfAKind(Int)
+  Straight(Int)
+  Flush(Int)
+  Pair(Int)
   HighCard
 }
 
@@ -107,13 +106,7 @@ pub type TotalScore {
 }
 
 pub type Score {
-  Score(
-    formation: Formation,
-    in_flank: Bool,
-    card_score: Int,
-    formation_bonus: Int,
-    flank_bonus: Int,
-  )
+  Score(score: Int, formation: Int, flank: Int)
 }
 
 pub type Errors {
@@ -188,7 +181,7 @@ pub fn next(state: GameState, action: Action) -> Result(GameState, Errors) {
         |> result.map(fn(board) { GameState(..state, board: board) })
       })
       |> result.map(fn(state) {
-        let total_score = calculate_total_score(state.board.battleline)
+        let total_score = calculate_total_score(state)
         GameState(..state, total_score: total_score)
       })
       |> result.map(fn(state) {
@@ -236,6 +229,8 @@ pub fn current_player(state: GameState) -> Player {
   first(state.sequence)
 }
 
+const slots = [Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8, Slot9]
+
 /// Retrieves battle columns from a player in the right order.
 pub fn columns(state: GameState, of player: Player) -> List(#(Slot, Column)) {
   let battleline = state.board.battleline
@@ -280,36 +275,7 @@ pub fn score_total(state: GameState) -> #(Option(Player), Int) {
   state.total_score.total
 }
 
-// /// Goes through a player's columns and checks for a breakthrough win.
-// fn is_breakthrough(board: Board, of player: Player) -> Bool {
-//   let flags = board.flags
-// 
-//   slots
-//   |> list.map(fn(slot) { get(flags, slot) })
-//   |> list.window(3)
-//   |> list.any(fn(claims) { list.all(claims, fn(flag) { flag == Some(player) }) })
-// }
-
-// /// Goes through a player's columns and checks for an envelopment win.
-// fn is_envelopment(board: Board, of player: Player) -> Bool {
-//   board.flags
-//   |> map.filter(fn(_slot, flag) { flag == Some(player) })
-//   |> map.size() >= 5
-// }
-
 // --- Function Helpers --- // 
-
-fn new_total_score() -> TotalScore {
-  TotalScore(
-    columns: list.map(slots, fn(_) { #(new_score(), new_score()) }),
-    totals: list.map(slots, fn(_) { figure_player(0) }),
-    total: #(None, 0),
-  )
-}
-
-fn new_score() -> Score {
-  Score(HighCard, False, 0, 0, 0)
-}
 
 fn new_board() -> Board {
   Board(
@@ -337,6 +303,14 @@ fn new_line(of piece: piece) -> Line(piece) {
   slots
   |> list.map(fn(slot) { #(slot, piece) })
   |> map.from_list()
+}
+
+fn new_total_score() -> TotalScore {
+  TotalScore(
+    columns: list.map(slots, fn(_) { #(Score(0, 0, 0), Score(0, 0, 0)) }),
+    totals: list.map(slots, fn(_) { figure_player(0) }),
+    total: #(None, 0),
+  )
 }
 
 fn draw_card(board: Board, of player: Player) -> Result(Board, Errors) {
@@ -369,20 +343,10 @@ fn card_score(column: Column) -> Int {
   |> list.fold(0, fn(sum, rank) { sum + rank })
 }
 
-fn scoring(column: Column) -> Int {
-  case formation(column) {
-    StraightFlush -> 11
-    ThreeOfAKind -> 7
-    Straight -> 5
-    Flush -> 3
-    Pair -> 1
-    HighCard -> 0
-  }
-}
-
 fn formation(column: Column) -> Formation {
   case list.sort(column, by: rank_compare) {
-    [card_a, card_b, card_c] -> formation_type(card_a, card_b, card_c)
+    [card_a, card_b, card_c] -> formation_triplet(card_a, card_b, card_c)
+    [card_a, card_b] -> formation_pair(card_a, card_b)
     _other -> HighCard
   }
 }
@@ -393,23 +357,30 @@ fn rank_compare(card_a: Card, card_b: Card) -> Order {
   int.compare(a, b)
 }
 
-fn formation_type(card_a: Card, card_b: Card, card_c: Card) -> Formation {
+fn formation_triplet(card_a: Card, card_b: Card, card_c: Card) -> Formation {
   let Card(suit: sa, rank: ra) = card_a
   let Card(suit: sb, rank: rb) = card_b
   let Card(suit: sc, rank: rc) = card_c
 
-  let pair = ra == rb || rb == rc || rc == ra
-  let triplet = ra == rb && rb == rc
-  let straight = sa == sb && sb == sc
-  let flush = { ra + 1 == rb } && { rb + 1 == rc }
+  let is_pair = ra == rb || rb == rc || rc == ra
+  let is_triplet = ra == rb && rb == rc
+  let is_straight = sa == sb && sb == sc
+  let is_flush = { ra + 1 == rb } && { rb + 1 == rc }
 
-  case pair, triplet, straight, flush {
-    _bool, False, True, True -> StraightFlush
-    _bool, True, False, False -> ThreeOfAKind
-    _bool, False, True, False -> Straight
-    _bool, False, False, True -> Flush
-    True, False, False, False -> Pair
-    False, False, False, False -> HighCard
+  case is_pair, is_triplet, is_straight, is_flush {
+    _bool, False, True, True -> straight_flush
+    _bool, True, False, False -> three_of_a_kind
+    _bool, False, True, False -> straight
+    _bool, False, False, True -> flush
+    True, False, False, False -> pair
+    False, False, False, False -> highcard
+  }
+}
+
+fn formation_pair(card_a: Card, card_b: Card) -> Formation {
+  case card_a.rank, card_b.rank {
+    ra, rb if ra == rb -> pair
+    _, _ -> highcard
   }
 }
 
@@ -476,8 +447,8 @@ fn are_moves_spent(hand: List(Card)) -> Bool {
   plays_per_turn == moves
 }
 
-fn calculate_total_score(battleline: Line(Battle)) -> TotalScore {
-  let columns = calculate_columns(battleline)
+fn calculate_total_score(state: GameState) -> TotalScore {
+  let columns = calculate_columns(state)
   let totals = calculate_totals(columns)
   let total = calculate_total(totals)
 
@@ -488,36 +459,87 @@ fn calculate_total_score(battleline: Line(Battle)) -> TotalScore {
   )
 }
 
-fn calculate_columns(battleline: Line(Battle)) -> List(#(Score, Score)) {
-  let score_p1 = new_score()
-  let score_p2 = new_score()
+fn calculate_columns(state: GameState) -> List(#(Score, Score)) {
+  let columns =
+    list.index_map(
+      slots,
+      fn(index, slot) {
+        let assert Ok(#(s1, s2)) = list.at(state.total_score.columns, index)
 
-  slots
-  |> list.map(fn(slot) {
-    let battle = get(battleline, slot)
-    let column_p1 = get(battle, Player1)
-    let column_p2 = get(battle, Player2)
+        let battle = get(state.board.battleline, slot)
+        let column_p1 = get(battle, Player1)
+        let column_p2 = get(battle, Player2)
 
-    let card_p1 = card_score(column_p1)
-    let bonus_p1 = scoring(column_p1)
-    let card_p2 = card_score(column_p2)
-    let bonus_p2 = scoring(column_p2)
-
-    #(
-      Score(
-        ..score_p1,
-        card_score: card_p1,
-        formation_bonus: bonus_p1,
-        flank_bonus: 0,
-      ),
-      Score(
-        ..score_p2,
-        card_score: card_p2,
-        formation_bonus: bonus_p2,
-        flank_bonus: 0,
-      ),
+        #(score(column_p1, s1.flank), score(column_p2, s2.flank))
+      },
     )
+
+  let flanks = flank_bonuses(columns)
+
+  let columns =
+    list.map(
+      slots,
+      fn(slot) {
+        let battle = get(state.board.battleline, slot)
+        let column_p1 = get(battle, Player1)
+        let column_p2 = get(battle, Player2)
+
+        #(score(column_p1, 0), score(column_p2, 0))
+      },
+    )
+
+  list.zip(columns, flanks)
+  |> list.map(fn(scores) {
+    let #(#(score_p1, score_p2), bonus) = scores
+
+    case bonus {
+      Some(Player1) -> #(Score(..score_p1, flank: flank_bonus), score_p2)
+      Some(Player2) -> #(score_p1, Score(..score_p2, flank: flank_bonus))
+      None -> #(score_p1, score_p2)
+    }
   })
+}
+
+fn score(column: List(Card), flank: Int) -> Score {
+  Score(
+    score: card_score(column),
+    formation: column
+    |> formation()
+    |> formation_bonus(),
+    flank: flank,
+  )
+}
+
+fn formation_bonus(formation: Formation) -> Int {
+  case formation {
+    StraightFlush(x) -> x
+    ThreeOfAKind(x) -> x
+    Straight(x) -> x
+    Flush(x) -> x
+    Pair(x) -> x
+    HighCard -> 0
+  }
+}
+
+fn flank_bonuses(scores: List(#(Score, Score))) -> List(Option(Player)) {
+  scores
+  |> list.map(fn(score) {
+    let #(score_p1, score_p2) = score
+    let score_p1 = score_p1.score + score_p1.formation + score_p1.flank
+    let score_p2 = score_p2.score + score_p2.formation + score_p2.flank
+
+    score_p1 - score_p2
+  })
+  |> list.window(3)
+  |> list.map(fn(claims) {
+    case claims {
+      [s1, s2, s3] if s1 > 0 && s2 > 0 && s3 > 0 -> Some(Player1)
+      [s1, s2, s3] if s1 < 0 && s2 < 0 && s3 < 0 -> Some(Player2)
+      _other -> None
+    }
+  })
+  |> list.prepend(None)
+  |> list.append([None])
 }
 
 fn calculate_totals(scores: List(#(Score, Score))) -> List(Int) {
@@ -526,9 +548,8 @@ fn calculate_totals(scores: List(#(Score, Score))) -> List(Int) {
     fn(score) {
       let #(score_p1, score_p2) = score
 
-      let score_p1 = score_p1.card_score + score_p1.formation_bonus
-      let score_p2 = score_p2.card_score + score_p2.formation_bonus
-
+      let score_p1 = score_p1.score + score_p1.formation + score_p1.flank
+      let score_p2 = score_p2.score + score_p2.formation + score_p2.flank
       score_p1 - score_p2
     },
   )
