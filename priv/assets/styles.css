@@ -66,6 +66,30 @@ button {
   color: #4f4f4f;
 }
 
+.board .scoring {
+ padding:20px; 
+  flex-grow: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+table {
+ font-size: 1.5vh;
+ min-width: 250px;
+ border-collapse: collapse;
+ background-color: var(--white);
+}
+
+table th, table td {
+ border: 1px solid var(--gray);
+}
+
+table tr {
+  height: 3.5vh;
+  text-align: center;
+}
+
 .board {
   display: flex;
   flex-direction: row;
@@ -80,6 +104,7 @@ button {
 
 .board>.deck {
   flex-grow: 2;
+  flex-direction: column;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -225,19 +250,19 @@ button {
   padding: 0px;
 }
 
-.card.red {
+.red {
   color: #b01818;
 }
 
-.card.blue {
+.blue {
   color: #0072aa;
 }
 
-.card.green {
+.green {
   color: #4d8848
 }
 
-.card.purple {
+.purple {
   color: #9c5aa2;
 }
 

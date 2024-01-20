@@ -11,24 +11,30 @@ import gleam/result.{try}
 // IDEA: Counter mechanic, being able to "steal" a card and place elsewhere
 // IDEA: Add sprites with animations instead of ranks
 
+const max_hand_size = 8
+
+const plays_per_turn = 4
+
+const slots = [Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8, Slot9]
+
+const ranks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+
+const suits = [Spade, Heart, Diamond, Club]
+
 pub opaque type GameState {
   GameState(
+    turn: Int,
     phase: Phase,
     board: Board,
     sequence: List(Player),
-    scoring: Scoring,
+    total_score: TotalScore,
   )
 }
 
 pub type Phase {
-  FillHandPhase
-  PlayCardPhase1
-  PlayCardPhase2
-  PlayCardPhase3
-  ReplentishPhase1
-  ReplentishPhase2
-  ReplentishPhase3
-  EndPhase
+  Draw
+  Play
+  End
 }
 
 pub opaque type Board {
@@ -83,16 +89,17 @@ type Battle =
 type Column =
   List(Card)
 
-type Formation {
-  ThreeSuitsInSequence
-  ThreeRanks
-  ThreeInSequence
-  ThreeSuits
+pub type Formation {
+  StraightFlush
+  ThreeOfAKind
+  Straight
+  Flush
+  Pair
   HighCard
 }
 
-pub type Scoring {
-  Scoring(
+pub type TotalScore {
+  TotalScore(
     columns: List(#(Score, Score)),
     totals: List(#(Option(Player), Int)),
     total: #(Option(Player), Int),
@@ -100,10 +107,17 @@ pub type Scoring {
 }
 
 pub type Score {
-  Score(card_score: Int, formation_bonus: Int)
+  Score(
+    formation: Formation,
+    in_flank: Bool,
+    card_score: Int,
+    formation_bonus: Int,
+    flank_bonus: Int,
+  )
 }
 
 pub type Errors {
+  InvalidAction(Action)
   NotCurrentPhase
   NotCurrentPlayer
   EmptyDeck
@@ -113,23 +127,16 @@ pub type Errors {
   NotClaimableSlot
 }
 
-const max_hand_size = 8
-
-const slots = [Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8, Slot9]
-
-const ranks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-
-const suits = [Spade, Heart, Diamond, Club]
-
 // --- GameState API --- //
 
 /// Initializes a new gamestate.
 pub fn new() -> GameState {
   GameState(
-    phase: FillHandPhase,
+    turn: 0,
+    phase: Draw,
     board: new_board(),
     sequence: list.shuffle([Player1, Player2]),
-    scoring: new_scoring(),
+    total_score: new_total_score(),
   )
 }
 
@@ -140,75 +147,64 @@ pub type Action {
 
 /// Modifies the game state by applying an action.
 pub fn next(state: GameState, action: Action) -> Result(GameState, Errors) {
-  let current = first(state.sequence)
+  let check_current_player = fn(state: GameState, player) {
+    let current = first(state.sequence)
+
+    case state.turn, player {
+      0, _player -> Ok(state)
+      _, player if player == current -> Ok(state)
+      _, _ -> Error(NotCurrentPlayer)
+    }
+  }
 
   case state.phase, action {
-    FillHandPhase, DrawCard(player) -> {
-      state
-      |> draw_card(player)
+    Draw, DrawCard(player) -> {
+      Ok(state)
+      |> result.then(check_current_player(_, player))
+      |> result.then(fn(state) {
+        draw_card(state.board, player)
+        |> result.map(fn(board) { GameState(..state, board: board) })
+      })
       |> result.map(fn(state) {
         case are_hands_full(state.board.hands) {
-          True -> GameState(..state, phase: PlayCardPhase1)
+          True ->
+            GameState(
+              ..state,
+              turn: state.turn + 1,
+              sequence: rotate(state.sequence),
+              phase: Play,
+            )
+
           False -> state
         }
       })
     }
 
-    PlayCardPhase1, PlayCard(player, slot, card) if player == current -> {
-      state
-      |> play_card(player, slot, card)
-      |> result.map(fn(state) {
-        GameState(..state, scoring: calculate_scoring(state.board.battleline))
+    Play, PlayCard(player, slot, card) -> {
+      Ok(state)
+      |> result.then(check_current_player(_, player))
+      |> result.then(fn(state) {
+        play_card(state.board, player, slot, card)
+        |> result.map(fn(board) { GameState(..state, board: board) })
       })
-      |> result.map(fn(state) { GameState(..state, phase: PlayCardPhase2) })
-    }
+      |> result.map(fn(state) {
+        let total_score = calculate_total_score(state.board.battleline)
+        GameState(..state, total_score: total_score)
+      })
+      |> result.map(fn(state) {
+        let hand = get(state.board.hands, player)
+        case are_moves_spent(hand), deck_size(state) {
+          True, 0 -> GameState(..state, phase: End)
 
-    PlayCardPhase2, PlayCard(player, slot, card) if player == current -> {
-      state
-      |> play_card(player, slot, card)
-      |> result.map(fn(state) {
-        GameState(..state, scoring: calculate_scoring(state.board.battleline))
-      })
-      |> result.map(fn(state) { GameState(..state, phase: PlayCardPhase3) })
-    }
+          True, _ -> GameState(..state, phase: Draw)
 
-    PlayCardPhase3, PlayCard(player, slot, card) if player == current -> {
-      state
-      |> play_card(player, slot, card)
-      |> result.map(fn(state) {
-        GameState(..state, scoring: calculate_scoring(state.board.battleline))
-      })
-      |> result.map(fn(state) {
-        case deck_size(state) {
-          size if size > 0 -> GameState(..state, phase: ReplentishPhase1)
-          _zero -> GameState(..state, phase: EndPhase)
+          False, _ -> state
         }
       })
     }
 
-    ReplentishPhase1, DrawCard(player) if player == current -> {
-      state
-      |> draw_card(player)
-      |> result.map(fn(state) { GameState(..state, phase: ReplentishPhase2) })
-    }
-
-    ReplentishPhase2, DrawCard(player) if player == current -> {
-      state
-      |> draw_card(player)
-      |> result.map(fn(state) { GameState(..state, phase: ReplentishPhase3) })
-    }
-
-    ReplentishPhase3, DrawCard(player) if player == current -> {
-      state
-      |> draw_card(player)
-      |> result.map(fn(state) { GameState(..state, phase: PlayCardPhase1) })
-      |> result.map(fn(state) {
-        GameState(..state, sequence: rotate(state.sequence))
-      })
-    }
-
-    _, _ -> {
-      Error(NotCurrentPhase)
+    _phase, action -> {
+      Error(InvalidAction(action))
     }
   }
 }
@@ -223,6 +219,11 @@ pub fn deck_size(state: GameState) -> Int {
 /// Retrieves a player's full hand
 pub fn player_hand(state: GameState, of player: Player) -> List(Card) {
   get(state.board.hands, player)
+}
+
+/// Retrieves the current turn
+pub fn current_turn(state: GameState) -> Int {
+  state.turn
 }
 
 /// Retrieves the current phase
@@ -264,16 +265,19 @@ pub fn available_plays(state: GameState, of player: Player) -> List(Slot) {
   |> result.is_ok()
 }
 
-pub fn score_columns(state: GameState) {
-  state.scoring.columns
+/// Retrieves both player's scores per column 
+pub fn score_columns(state: GameState) -> List(#(Score, Score)) {
+  state.total_score.columns
 }
 
-pub fn score_totals(state: GameState) {
-  state.scoring.totals
+/// Retrieves the winning score per column
+pub fn score_totals(state: GameState) -> List(#(Option(Player), Int)) {
+  state.total_score.totals
 }
 
-pub fn score_total(state: GameState) {
-  state.scoring.total
+/// Retrieves the winning score 
+pub fn score_total(state: GameState) -> #(Option(Player), Int) {
+  state.total_score.total
 }
 
 // /// Goes through a player's columns and checks for a breakthrough win.
@@ -295,12 +299,16 @@ pub fn score_total(state: GameState) {
 
 // --- Function Helpers --- // 
 
-fn new_scoring() -> Scoring {
-  Scoring(
-    columns: list.map(slots, fn(_) { #(Score(0, 0), Score(0, 0)) }),
+fn new_total_score() -> TotalScore {
+  TotalScore(
+    columns: list.map(slots, fn(_) { #(new_score(), new_score()) }),
     totals: list.map(slots, fn(_) { figure_player(0) }),
     total: #(None, 0),
   )
+}
+
+fn new_score() -> Score {
+  Score(HighCard, False, 0, 0, 0)
 }
 
 fn new_board() -> Board {
@@ -331,15 +339,13 @@ fn new_line(of piece: piece) -> Line(piece) {
   |> map.from_list()
 }
 
-fn draw_card(state: GameState, of player: Player) -> Result(GameState, Errors) {
-  let GameState(board: board, ..) = state
+fn draw_card(board: Board, of player: Player) -> Result(Board, Errors) {
   let hand = get(board.hands, player)
   use #(card, deck) <- try(draw_card_from_deck(board.deck))
   use new_hand <- try(add_card_to_hand(hand, card))
   let hands = map.insert(board.hands, player, new_hand)
   let board = Board(..board, deck: deck, hands: hands)
-  let state = GameState(..state, board: board)
-  Ok(state)
+  Ok(board)
 }
 
 fn draw_card_from_deck(deck: List(Card)) -> Result(#(Card, List(Card)), Errors) {
@@ -363,12 +369,13 @@ fn card_score(column: Column) -> Int {
   |> list.fold(0, fn(sum, rank) { sum + rank })
 }
 
-fn formation_score(column: Column) -> Int {
+fn scoring(column: Column) -> Int {
   case formation(column) {
-    ThreeSuitsInSequence -> 7
-    ThreeRanks -> 5
-    ThreeInSequence -> 3
-    ThreeSuits -> 1
+    StraightFlush -> 11
+    ThreeOfAKind -> 7
+    Straight -> 5
+    Flush -> 3
+    Pair -> 1
     HighCard -> 0
   }
 }
@@ -391,26 +398,27 @@ fn formation_type(card_a: Card, card_b: Card, card_c: Card) -> Formation {
   let Card(suit: sb, rank: rb) = card_b
   let Card(suit: sc, rank: rc) = card_c
 
-  let same_suits = sa == sb && sb == sc
-  let same_ranks = ra == rb && rb == rc
-  let in_sequence = { ra + 1 == rb } && { rb + 1 == rc }
+  let pair = ra == rb || rb == rc || rc == ra
+  let triplet = ra == rb && rb == rc
+  let straight = sa == sb && sb == sc
+  let flush = { ra + 1 == rb } && { rb + 1 == rc }
 
-  case same_suits, same_ranks, in_sequence {
-    True, False, True -> ThreeSuitsInSequence
-    False, True, False -> ThreeRanks
-    False, False, True -> ThreeInSequence
-    True, False, False -> ThreeSuits
-    False, False, False -> HighCard
+  case pair, triplet, straight, flush {
+    _bool, False, True, True -> StraightFlush
+    _bool, True, False, False -> ThreeOfAKind
+    _bool, False, True, False -> Straight
+    _bool, False, False, True -> Flush
+    True, False, False, False -> Pair
+    False, False, False, False -> HighCard
   }
 }
 
 fn play_card(
-  state: GameState,
+  board: Board,
   of player: Player,
   at slot: Slot,
   with card: Card,
-) -> Result(GameState, Errors) {
-  let GameState(board: board, ..) = state
+) -> Result(Board, Errors) {
   let hand = get(board.hands, player)
   let battle = get(board.battleline, slot)
   let column = get(battle, player)
@@ -425,9 +433,8 @@ fn play_card(
   let battleline = map.insert(board.battleline, slot, battle)
 
   let board = Board(..board, hands: hands, battleline: battleline)
-  let state = GameState(..state, board: board)
 
-  Ok(state)
+  Ok(board)
 }
 
 fn pick_card(
@@ -463,12 +470,18 @@ fn are_hands_full(hands: Map(Player, List(Card))) -> Bool {
   list.length(p1_hand) >= max_hand_size && list.length(p2_hand) >= max_hand_size
 }
 
-fn calculate_scoring(battleline: Line(Battle)) -> Scoring {
+fn are_moves_spent(hand: List(Card)) -> Bool {
+  let moves = max_hand_size - list.length(hand)
+
+  plays_per_turn == moves
+}
+
+fn calculate_total_score(battleline: Line(Battle)) -> TotalScore {
   let columns = calculate_columns(battleline)
   let totals = calculate_totals(columns)
   let total = calculate_total(totals)
 
-  Scoring(
+  TotalScore(
     columns: columns,
     totals: list.map(totals, figure_player),
     total: figure_player(total),
@@ -476,6 +489,9 @@ fn calculate_scoring(battleline: Line(Battle)) -> Scoring {
 }
 
 fn calculate_columns(battleline: Line(Battle)) -> List(#(Score, Score)) {
+  let score_p1 = new_score()
+  let score_p2 = new_score()
+
   slots
   |> list.map(fn(slot) {
     let battle = get(battleline, slot)
@@ -483,60 +499,39 @@ fn calculate_columns(battleline: Line(Battle)) -> List(#(Score, Score)) {
     let column_p2 = get(battle, Player2)
 
     let card_p1 = card_score(column_p1)
-    let bonus_p1 = formation_score(column_p1)
+    let bonus_p1 = scoring(column_p1)
     let card_p2 = card_score(column_p2)
-    let bonus_p2 = formation_score(column_p2)
+    let bonus_p2 = scoring(column_p2)
 
     #(
-      Score(card_score: card_p1, formation_bonus: bonus_p1),
-      Score(card_score: card_p2, formation_bonus: bonus_p2),
+      Score(
+        ..score_p1,
+        card_score: card_p1,
+        formation_bonus: bonus_p1,
+        flank_bonus: 0,
+      ),
+      Score(
+        ..score_p2,
+        card_score: card_p2,
+        formation_bonus: bonus_p2,
+        flank_bonus: 0,
+      ),
     )
   })
 }
 
 fn calculate_totals(scores: List(#(Score, Score))) -> List(Int) {
-  let totals =
-    list.map(
-      scores,
-      fn(score) {
-        let #(score_p1, score_p2) = score
+  list.map(
+    scores,
+    fn(score) {
+      let #(score_p1, score_p2) = score
 
-        let score_p1 = score_p1.card_score + score_p1.formation_bonus
-        let score_p2 = score_p2.card_score + score_p2.formation_bonus
+      let score_p1 = score_p1.card_score + score_p1.formation_bonus
+      let score_p2 = score_p2.card_score + score_p2.formation_bonus
 
-        score_p1 - score_p2
-      },
-    )
-
-  // TODO: Review how to do retroactive scoring
-  //let assert [first, ..] = totals
-  //let right_support = right_support_score(totals)
-  //let totals = [first, ..right_support]
-
-  //let assert [last, ..] = list.reverse(totals)
-  //let left_support = left_support_score(totals)
-  //let totals = list.append(left_support, [last])
-
-  totals
-}
-
-fn right_support_score(scores: List(Int)) -> List(Int) {
-  scores
-  |> list.window_by_2()
-  |> list.map(fn(pair) {
-    case pair {
-      #(left, right) if left > 0 && right > 0 -> right + 1
-      #(left, right) if left < 0 && right < 0 -> right - 1
-      _other -> 0
-    }
-  })
-}
-
-fn left_support_score(scores: List(Int)) -> List(Int) {
-  scores
-  |> list.reverse()
-  |> right_support_score()
-  |> list.reverse()
+      score_p1 - score_p2
+    },
+  )
 }
 
 fn calculate_total(scores: List(Int)) -> Int {

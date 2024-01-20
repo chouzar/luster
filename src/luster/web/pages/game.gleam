@@ -50,20 +50,12 @@ pub fn update(model: Model, message: Message) -> Model {
   case message {
     SelectCard(player, card) -> {
       case cf.current_phase(model.gamestate) {
-        cf.PlayCardPhase1 | cf.PlayCardPhase2 | cf.PlayCardPhase3 ->
-          case cf.current_player(model.gamestate) {
-            current_player if player == current_player -> {
-              let alert = Some(Info("Play card on a column"))
-              let selected_card =
-                map.insert(model.selected_card, player, Some(card))
-              Model(..model, alert: alert, selected_card: selected_card)
-            }
-
-            _other -> {
-              let alert = to_alert(cf.NotCurrentPlayer)
-              Model(..model, alert: Some(alert))
-            }
-          }
+        cf.Play -> {
+          let alert = Some(Info("Play card on a column"))
+          let selected_card =
+            map.insert(model.selected_card, player, Some(card))
+          Model(..model, alert: alert, selected_card: selected_card)
+        }
 
         _other -> {
           let alert = to_alert(cf.NotCurrentPhase)
@@ -93,7 +85,7 @@ pub fn view(model: Model) -> html.Node(a) {
     html.div(
       [attrs.class("board")],
       [
-        view_card_pile(model.gamestate, cf.Player2),
+        html.div([attrs.class("scoring")], [scoring_table()]),
         html.div(
           [attrs.class("field")],
           [
@@ -106,7 +98,7 @@ pub fn view(model: Model) -> html.Node(a) {
             view_hand(model.gamestate, cf.Player1),
           ],
         ),
-        view_card_pile(model.gamestate, cf.Player1),
+        view_card_pile(model.gamestate),
       ],
     ),
   ])
@@ -119,15 +111,11 @@ fn view_game_info(state: cf.GameState) -> html.Node(a) {
     cf.deck_size(state)
     |> int.to_string()
 
-  let phase = case cf.current_phase(state) {
-    cf.FillHandPhase -> "Initial Draw"
-    cf.PlayCardPhase1 -> "Play Card"
-    cf.PlayCardPhase2 -> "Play Card"
-    cf.PlayCardPhase3 -> "Play Card"
-    cf.ReplentishPhase1 -> "Replentish Hand"
-    cf.ReplentishPhase2 -> "Replentish Hand"
-    cf.ReplentishPhase3 -> "Replentish Hand"
-    cf.EndPhase -> "Game!"
+  let phase = case cf.current_turn(state), cf.current_phase(state) {
+    0, cf.Draw -> "Initial Draw"
+    _, cf.Draw -> "Draw Card Phase"
+    _, cf.Play -> "Play Card Phase"
+    _, cf.End -> "Game!"
   }
 
   let player = case cf.current_player(state) {
@@ -165,13 +153,23 @@ fn view_alert(message: Option(Alert)) -> html.Node(a) {
   }
 }
 
-fn view_card_pile(state: cf.GameState, player: cf.Player) -> html.Node(a) {
+fn view_card_pile(state: cf.GameState) -> html.Node(a) {
   let size = cf.deck_size(state)
-  let event = encode_draw_card(player)
+  let p1_event = encode_draw_card(cf.Player1)
+  let p2_event = encode_draw_card(cf.Player2)
 
   html.div(
     [attrs.class("deck")],
-    [html.section([attrs.class("draw-pile")], [form(event, draw_deck(size))])],
+    [
+      html.section(
+        [attrs.class("draw-pile")],
+        [form(p2_event, draw_deck(size))],
+      ),
+      html.section(
+        [attrs.class("draw-pile")],
+        [form(p1_event, draw_deck(size))],
+      ),
+    ],
   )
 }
 
@@ -284,19 +282,8 @@ fn view_slots(model: Model, player: cf.Player) -> html.Node(a) {
 // --- View board components --- //
 
 fn card_front(card: cf.Card) -> html.Node(a) {
-  let suit = case card.suit {
-    cf.Spade -> "♠"
-    cf.Heart -> "♥"
-    cf.Diamond -> "♦"
-    cf.Club -> "♣"
-  }
-
-  let color = case card.suit {
-    cf.Spade -> "blue"
-    cf.Heart -> "red"
-    cf.Diamond -> "green"
-    cf.Club -> "purple"
-  }
+  let utf = suit_utf(card.suit)
+  let color = suit_color(card.suit)
 
   let rank = int.to_string(card.rank)
 
@@ -305,12 +292,12 @@ fn card_front(card: cf.Card) -> html.Node(a) {
     [
       html.div(
         [attrs.class("upper-left")],
-        [html.p([], [html.Text(rank)]), html.p([], [html.Text(suit)])],
+        [html.p_text([], rank), html.p_text([], utf)],
       ),
-      html.div([attrs.class("graphic")], [html.p([], [html.Text(suit)])]),
+      html.div([attrs.class("graphic")], [html.p_text([], utf)]),
       html.div(
         [attrs.class("bottom-right")],
-        [html.p([], [html.Text(rank)]), html.p([], [html.Text(suit)])],
+        [html.p_text([], rank), html.p_text([], utf)],
       ),
     ],
   )
@@ -357,6 +344,7 @@ fn alert(alert: Alert) -> html.Node(a) {
 
 fn to_alert(error: cf.Errors) -> Alert {
   case error {
+    cf.InvalidAction(_) -> Bad("Invalid Action")
     cf.NotCurrentPhase -> Warn("Not current phase")
     cf.NotCurrentPlayer -> Warn("Not current player")
     cf.NoCardInHand -> Warn("Card not in hand")
@@ -364,6 +352,118 @@ fn to_alert(error: cf.Errors) -> Alert {
     cf.MaxHandReached -> Info("Hand at max")
     cf.NotClaimableSlot -> Info("Slot is not claimable")
     cf.NotPlayableSlot -> Info("Slot is not playable")
+  }
+}
+
+fn scoring_table() -> html.Node(a) {
+  let data_row = fn(play, example, points, bonus) {
+    let points = int.to_string(points)
+    let bonus = int.to_string(bonus)
+
+    html.tr(
+      [],
+      [
+        html.td([], [html.Text(play)]),
+        html.td([], example),
+        html.td([], [html.Text(points)]),
+        html.td([], [html.Text("+" <> bonus)]),
+      ],
+    )
+  }
+
+  html.table(
+    [],
+    [
+      html.caption_text([], "Scoring cheatsheet."),
+      html.thead(
+        [],
+        [
+          html.tr(
+            [],
+            [
+              html.th_text([], "Play"),
+              html.th_text([], "Example"),
+              html.th_text([], "Points"),
+              html.th_text([], "Bonus"),
+            ],
+          ),
+        ],
+      ),
+      html.tbody(
+        [],
+        [
+          data_row(
+            "Straight flush",
+            [s(cf.Spade, 3), s(cf.Spade, 2), s(cf.Spade, 1)],
+            5,
+            11,
+          ),
+          data_row(
+            "Three of a kind",
+            [s(cf.Spade, 7), s(cf.Diamond, 7), s(cf.Club, 7)],
+            21,
+            7,
+          ),
+          data_row(
+            "Straight",
+            [s(cf.Heart, 6), s(cf.Club, 5), s(cf.Spade, 4)],
+            15,
+            5,
+          ),
+          data_row(
+            "Flush",
+            [s(cf.Heart, 7), s(cf.Heart, 4), s(cf.Heart, 1)],
+            12,
+            3,
+          ),
+          data_row("Pair", [s(cf.Club, 5), s(cf.Diamond, 2)], 7, 1),
+          data_row(
+            "High card",
+            [s(cf.Club, 8), s(cf.Spade, 4), s(cf.Club, 2)],
+            14,
+            0,
+          ),
+        ],
+      ),
+      html.thead(
+        [],
+        [
+          html.tr(
+            [],
+            [
+              html.th_text([colspan(2)], "Adjacent Play"),
+              html.th_text([colspan(2)], "Bonus"),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
+fn s(suit: cf.Suit, rank: Int) -> html.Node(a) {
+  let utf = suit_utf(suit)
+  let color = suit_color(suit)
+  let rank = int.to_string(rank)
+
+  html.span_text([attrs.class(color)], rank <> utf <> " ")
+}
+
+fn suit_utf(suit: cf.Suit) -> String {
+  case suit {
+    cf.Spade -> "♠"
+    cf.Heart -> "♥"
+    cf.Diamond -> "♦"
+    cf.Club -> "♣"
+  }
+}
+
+fn suit_color(suit: cf.Suit) -> String {
+  case suit {
+    cf.Spade -> "blue"
+    cf.Heart -> "red"
+    cf.Diamond -> "green"
+    cf.Club -> "purple"
   }
 }
 
@@ -386,6 +486,10 @@ fn hidden_input(param: #(String, String)) -> html.Node(a) {
 fn button(form_id: String, markup: html.Node(a)) -> html.Node(a) {
   let form_attr = attrs.Attr(name: "form", value: form_id)
   html.button([form_attr], [markup])
+}
+
+fn colspan(value: Int) -> attrs.Attr(a) {
+  attrs.Attr(name: "colspan", value: int.to_string(value))
 }
 
 // --- Helpers --- //
