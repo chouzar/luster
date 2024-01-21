@@ -9,19 +9,19 @@ const max_hand_size = 8
 
 const plays_per_turn = 4
 
-const straight_flush = StraightFlush(11)
+const straight_flush = 19
 
-const three_of_a_kind = ThreeOfAKind(7)
+const three_of_a_kind = 17
 
-const straight = Straight(5)
+const straight = 7
 
-const flush = Flush(3)
+const flush = 5
 
-const pair = Pair(1)
+const pair = 3
 
 const flank_bonus = 1
 
-const highcard = HighCard
+const highcard = 0
 
 const ranks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
@@ -88,12 +88,12 @@ type Battle =
 type Column =
   List(Card)
 
-type Formation {
-  StraightFlush(Int)
-  ThreeOfAKind(Int)
-  Straight(Int)
-  Flush(Int)
-  Pair(Int)
+pub type Formation {
+  StraightFlush
+  ThreeOfAKind
+  Straight
+  Flush
+  Pair
   HighCard
 }
 
@@ -106,7 +106,12 @@ pub type TotalScore {
 }
 
 pub type Score {
-  Score(score: Int, formation: Int, flank: Int)
+  Score(
+    score: Int,
+    bonus_formation: Int,
+    bonus_flank: Int,
+    formation: Formation,
+  )
 }
 
 pub type Errors {
@@ -150,6 +155,7 @@ pub fn next(state: GameState, action: Action) -> Result(GameState, Errors) {
     }
   }
 
+  // TODO: Draw should not stop from playng the other player
   case state.phase, action {
     Draw, DrawCard(player) -> {
       Ok(state)
@@ -307,7 +313,10 @@ fn new_line(of piece: piece) -> Line(piece) {
 
 fn new_total_score() -> TotalScore {
   TotalScore(
-    columns: list.map(slots, fn(_) { #(Score(0, 0, 0), Score(0, 0, 0)) }),
+    columns: list.map(
+      slots,
+      fn(_) { #(Score(0, 0, 0, HighCard), Score(0, 0, 0, HighCard)) },
+    ),
     totals: list.map(slots, fn(_) { figure_player(0) }),
     total: #(None, 0),
   )
@@ -368,19 +377,19 @@ fn formation_triplet(card_a: Card, card_b: Card, card_c: Card) -> Formation {
   let is_flush = { ra + 1 == rb } && { rb + 1 == rc }
 
   case is_pair, is_triplet, is_straight, is_flush {
-    _bool, False, True, True -> straight_flush
-    _bool, True, False, False -> three_of_a_kind
-    _bool, False, True, False -> straight
-    _bool, False, False, True -> flush
-    True, False, False, False -> pair
-    False, False, False, False -> highcard
+    _bool, False, True, True -> StraightFlush
+    _bool, True, False, False -> ThreeOfAKind
+    _bool, False, True, False -> Straight
+    _bool, False, False, True -> Flush
+    True, False, False, False -> Pair
+    False, False, False, False -> HighCard
   }
 }
 
 fn formation_pair(card_a: Card, card_b: Card) -> Formation {
   case card_a.rank, card_b.rank {
-    ra, rb if ra == rb -> pair
-    _, _ -> highcard
+    ra, rb if ra == rb -> Pair
+    _, _ -> HighCard
   }
 }
 
@@ -470,7 +479,7 @@ fn calculate_columns(state: GameState) -> List(#(Score, Score)) {
         let column_p1 = get(battle, Player1)
         let column_p2 = get(battle, Player2)
 
-        #(score(column_p1, s1.flank), score(column_p2, s2.flank))
+        #(score(column_p1, s1.bonus_flank), score(column_p2, s2.bonus_flank))
       },
     )
 
@@ -493,31 +502,32 @@ fn calculate_columns(state: GameState) -> List(#(Score, Score)) {
     let #(#(score_p1, score_p2), bonus) = scores
 
     case bonus {
-      Some(Player1) -> #(Score(..score_p1, flank: flank_bonus), score_p2)
-      Some(Player2) -> #(score_p1, Score(..score_p2, flank: flank_bonus))
+      Some(Player1) -> #(Score(..score_p1, bonus_flank: flank_bonus), score_p2)
+      Some(Player2) -> #(score_p1, Score(..score_p2, bonus_flank: flank_bonus))
       None -> #(score_p1, score_p2)
     }
   })
 }
 
 fn score(column: List(Card), flank: Int) -> Score {
+  let formation = formation(column)
+
   Score(
     score: card_score(column),
-    formation: column
-    |> formation()
-    |> formation_bonus(),
-    flank: flank,
+    bonus_formation: formation_bonus(formation),
+    bonus_flank: flank,
+    formation: formation,
   )
 }
 
 fn formation_bonus(formation: Formation) -> Int {
   case formation {
-    StraightFlush(x) -> x
-    ThreeOfAKind(x) -> x
-    Straight(x) -> x
-    Flush(x) -> x
-    Pair(x) -> x
-    HighCard -> 0
+    StraightFlush -> straight_flush
+    ThreeOfAKind -> three_of_a_kind
+    Straight -> straight
+    Flush -> flush
+    Pair -> pair
+    HighCard -> highcard
   }
 }
 
@@ -525,8 +535,10 @@ fn flank_bonuses(scores: List(#(Score, Score))) -> List(Option(Player)) {
   scores
   |> list.map(fn(score) {
     let #(score_p1, score_p2) = score
-    let score_p1 = score_p1.score + score_p1.formation + score_p1.flank
-    let score_p2 = score_p2.score + score_p2.formation + score_p2.flank
+    let score_p1 =
+      score_p1.score + score_p1.bonus_formation + score_p1.bonus_flank
+    let score_p2 =
+      score_p2.score + score_p2.bonus_formation + score_p2.bonus_flank
 
     score_p1 - score_p2
   })
@@ -548,8 +560,10 @@ fn calculate_totals(scores: List(#(Score, Score))) -> List(Int) {
     fn(score) {
       let #(score_p1, score_p2) = score
 
-      let score_p1 = score_p1.score + score_p1.formation + score_p1.flank
-      let score_p2 = score_p2.score + score_p2.formation + score_p2.flank
+      let score_p1 =
+        score_p1.score + score_p1.bonus_formation + score_p1.bonus_flank
+      let score_p2 =
+        score_p2.score + score_p2.bonus_formation + score_p2.bonus_flank
       score_p1 - score_p2
     },
   )

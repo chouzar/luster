@@ -12,12 +12,35 @@
   --font-purple: #4f40ffc9;
   --dubious-light-green: #b7cc91ad;
   --dubious-dark-green: #436c3b99;
+  --not-black: #44230f;
+  --green: #e5fbcc;
+  --yellow: #f0f2b7f0;
 }
 
 body {
   margin: 0;
   padding: 0;
   background-color: #f0f1ff;
+}
+
+.popup {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  font-size: 5vh;
+  text-align: center;
+}
+
+.popup>div {
+  border-radius: 5px;
+}
+
+.popup h1, .popup h2, .popup h3 {
+ margin: 0; 
 }
 
 .lobby-games {
@@ -75,20 +98,56 @@ button {
   align-items: center;
 }
 
-table {
+.cheatsheet {
  font-size: 1.5vh;
  min-width: 250px;
  border-collapse: collapse;
  background-color: var(--white);
 }
 
-table th, table td {
+.cheatsheet th, .cheatsheet td {
  border: 1px solid var(--gray);
 }
 
-table tr {
+.cheatsheet tr {
   height: 3.5vh;
   text-align: center;
+}
+
+.score-winner {
+ padding: 1vh 0 1vh 0;  
+}
+
+.score-group {
+  display: flex;
+  font-size: 2.25vh; 
+  padding: 2vh 0 2vh 0;
+  background-color: var(--yellow);
+}
+
+.score-group > div {
+  padding: 0 2vh 0 2vh;
+}
+
+.score-group  table {
+  width: 100%;
+}
+
+.score-group  table td {
+ padding: 5px 10px; 
+}
+.score-group  table td:nth-child(1) {
+  text-align: left;
+  font-size: 3vh;
+}
+.score-group  table td:nth-child(2) {
+  text-align: right;
+  font-size: 3.25vh;
+}
+
+.score-group table td div:nth-child(2) {
+  text-align: right;
+  font-size: 1.75vh;
 }
 
 .board {
@@ -379,13 +438,11 @@ table tr {
   margin: 6px;
 }
 
-.card.sparkle {
-  outline: 1px solid #d070b8;
-}
-
 /* took inspiration from https://codepen.io/apo11oCreed/pen/WNEgJE */
 /* and https://gleam.run easter egg :sparkles: */
-.card.back.sparkle {
+.sparkle {
+  outline: 1px solid #d070b8;
+  color: var(--not-black);
   background:
     repeating-linear-gradient(
       40deg,
