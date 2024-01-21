@@ -2,7 +2,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/string
 import gleam/pair
 import gleam/list
-import gleam/map.{type Map}
+import gleam/dict.{type Dict}
 import gleam/result.{try}
 import luster/game/cardfield as cf
 import gleam/int
@@ -15,7 +15,7 @@ pub type Model {
   Model(
     name: String,
     alert: Option(Alert),
-    selected_card: Map(cf.Player, Option(cf.Card)),
+    selected_card: Dict(cf.Player, Option(cf.Card)),
     gamestate: cf.GameState,
   )
 }
@@ -39,9 +39,9 @@ pub fn init() -> Model {
   Model(
     name: generate_name(),
     alert: None,
-    selected_card: map.new()
-    |> map.insert(cf.Player1, None)
-    |> map.insert(cf.Player2, None),
+    selected_card: dict.new()
+    |> dict.insert(cf.Player1, None)
+    |> dict.insert(cf.Player2, None),
     gamestate: cf.new(),
   )
 }
@@ -53,7 +53,7 @@ pub fn update(model: Model, message: Message) -> Model {
         cf.Play -> {
           let alert = Some(Info("Play card on a column"))
           let selected_card =
-            map.insert(model.selected_card, player, Some(card))
+            dict.insert(model.selected_card, player, Some(card))
           Model(..model, alert: alert, selected_card: selected_card)
         }
 
@@ -267,7 +267,7 @@ fn view_hand(state: cf.GameState, player: cf.Player) -> html.Node(a) {
 
 fn view_slots(model: Model, player: cf.Player) -> html.Node(a) {
   let columns = cf.columns(model.gamestate, player)
-  let assert Ok(selected_card) = map.get(model.selected_card, player)
+  let assert Ok(selected_card) = dict.get(model.selected_card, player)
   let player_class = encode_player(player)
 
   html.section(
@@ -342,7 +342,7 @@ fn draw_deck(size: Int) -> html.Node(a) {
     x if x > 08 -> 03
     x if x > 04 -> 02
     x if x > 00 -> 01
-    0 -> 0
+    _ -> 0
   }
 
   let card = card_back()

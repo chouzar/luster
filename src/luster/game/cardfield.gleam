@@ -1,6 +1,6 @@
 import gleam/int
 import gleam/list
-import gleam/map.{type Map}
+import gleam/dict.{type Dict}
 import gleam/option.{type Option, None, Some}
 import gleam/order.{type Order}
 import gleam/result.{try}
@@ -46,7 +46,7 @@ pub type Phase {
 pub opaque type Board {
   Board(
     deck: List(Card),
-    hands: Map(Player, List(Card)),
+    hands: Dict(Player, List(Card)),
     battleline: Line(Battle),
   )
 }
@@ -57,7 +57,7 @@ pub type Player {
 }
 
 type Line(piece) =
-  Map(Slot, piece)
+  Dict(Slot, piece)
 
 pub type Slot {
   Slot1
@@ -83,7 +83,7 @@ pub type Suit {
 }
 
 type Battle =
-  Map(Player, Column)
+  Dict(Player, Column)
 
 type Column =
   List(Card)
@@ -287,13 +287,13 @@ fn new_board() -> Board {
   Board(
     deck: new_deck(),
     battleline: new_line(
-      map.new()
-      |> map.insert(Player1, [])
-      |> map.insert(Player2, []),
+      dict.new()
+      |> dict.insert(Player1, [])
+      |> dict.insert(Player2, []),
     ),
-    hands: map.new()
-    |> map.insert(Player1, [])
-    |> map.insert(Player2, []),
+    hands: dict.new()
+    |> dict.insert(Player1, [])
+    |> dict.insert(Player2, []),
   )
 }
 
@@ -308,7 +308,7 @@ fn new_deck() -> List(Card) {
 fn new_line(of piece: piece) -> Line(piece) {
   slots
   |> list.map(fn(slot) { #(slot, piece) })
-  |> map.from_list()
+  |> dict.from_list()
 }
 
 fn new_total_score() -> TotalScore {
@@ -326,7 +326,7 @@ fn draw_card(board: Board, of player: Player) -> Result(Board, Errors) {
   let hand = get(board.hands, player)
   use #(card, deck) <- try(draw_card_from_deck(board.deck))
   use new_hand <- try(add_card_to_hand(hand, card))
-  let hands = map.insert(board.hands, player, new_hand)
+  let hands = dict.insert(board.hands, player, new_hand)
   let board = Board(..board, deck: deck, hands: hands)
   Ok(board)
 }
@@ -382,7 +382,7 @@ fn formation_triplet(card_a: Card, card_b: Card, card_c: Card) -> Formation {
     _bool, False, True, False -> Straight
     _bool, False, False, True -> Flush
     True, False, False, False -> Pair
-    False, False, False, False -> HighCard
+    _bool, _bool, _bool, _bool -> HighCard
   }
 }
 
@@ -406,11 +406,11 @@ fn play_card(
   use #(card, hand) <- try(pick_card(from: hand, where: card))
   use column <- try(available_play(is: column))
 
-  let hands = map.insert(board.hands, player, hand)
+  let hands = dict.insert(board.hands, player, hand)
 
   let column = list.append(column, [card])
-  let battle = map.insert(battle, player, column)
-  let battleline = map.insert(board.battleline, slot, battle)
+  let battle = dict.insert(battle, player, column)
+  let battleline = dict.insert(board.battleline, slot, battle)
 
   let board = Board(..board, hands: hands, battleline: battleline)
 
@@ -443,7 +443,7 @@ fn first(list: List(x)) -> x {
   head
 }
 
-fn are_hands_full(hands: Map(Player, List(Card))) -> Bool {
+fn are_hands_full(hands: Dict(Player, List(Card))) -> Bool {
   let p1_hand = get(hands, Player1)
   let p2_hand = get(hands, Player2)
 
@@ -472,7 +472,7 @@ fn calculate_columns(state: GameState) -> List(#(Score, Score)) {
   let columns =
     list.index_map(
       slots,
-      fn(index, slot) {
+      fn(slot, index) {
         let assert Ok(#(s1, s2)) = list.at(state.total_score.columns, index)
 
         let battle = get(state.board.battleline, slot)
@@ -577,11 +577,11 @@ fn figure_player(score: Int) -> #(Option(Player), Int) {
   case score {
     score if score > 0 -> #(Some(Player1), score)
     score if score < 0 -> #(Some(Player2), int.absolute_value(score))
-    0 -> #(None, 0)
+    _score -> #(None, 0)
   }
 }
 
-fn get(map: Map(key, value), key: key) -> value {
-  let assert Ok(value) = map.get(map, key)
+fn get(map: Dict(key, value), key: key) -> value {
+  let assert Ok(value) = dict.get(map, key)
   value
 }
