@@ -16,6 +16,7 @@ pub type Model {
     name: String,
     alert: Option(Alert),
     selected_card: Dict(cf.Player, Option(cf.Card)),
+    toggle_scoring: Bool,
     gamestate: cf.GameState,
   )
 }
@@ -27,6 +28,7 @@ type Event {
 pub type Message {
   SelectCard(player: cf.Player, card: cf.Card)
   Move(action: cf.Action)
+  ToggleScoring
 }
 
 pub type Alert {
@@ -42,6 +44,7 @@ pub fn init() -> Model {
     selected_card: dict.new()
     |> dict.insert(cf.Player1, None)
     |> dict.insert(cf.Player2, None),
+    toggle_scoring: True,
     gamestate: cf.new(),
   )
 }
@@ -75,14 +78,25 @@ pub fn update(model: Model, message: Message) -> Model {
         }
       }
     }
+
+    ToggleScoring -> {
+      Model(..model, toggle_scoring: !model.toggle_scoring)
+    }
   }
 }
 
 pub fn view(model: Model) -> html.Node(a) {
   let phase = cf.current_phase(model.gamestate)
 
+  let end_game_scoring = case model.toggle_scoring {
+    True -> end_game_scoring(model.gamestate)
+    False -> html.Nothing
+  }
+
+  let toggle_event = encode_toggle_scoring()
+
   html.Fragment([
-    popup(phase == cf.End, end_game_scoring(model.gamestate)),
+    form(toggle_event, popup(phase == cf.End, end_game_scoring)),
     view_game_info(model.gamestate),
     view_alert(model.alert),
     html.div(
@@ -706,6 +720,10 @@ pub fn decode_message(
       Ok(SelectCard(player, cf.Card(rank, suit)))
     }
 
+    [#("action", "toggle-scoring")] -> {
+      Ok(ToggleScoring)
+    }
+
     _other -> Error("Malformed message")
   }
 }
@@ -752,6 +770,12 @@ fn encode_play_card(player: cf.Player, slot: cf.Slot, card: cf.Card) -> Event {
       #("card_suit", encode_card_suit(card.suit)),
     ],
   )
+}
+
+fn encode_toggle_scoring() -> Event {
+  let action = "toggle-scoring"
+
+  Event(id: action, data: [#("action", action)])
 }
 
 const encoding_for_player = [
