@@ -8,6 +8,7 @@ import luster/game/cardfield as cf
 import gleam/int
 import nakai/html
 import nakai/html/attrs
+import gleam/io
 
 // --- Elmish Game --- //
 
@@ -99,25 +100,19 @@ pub fn view(model: Model) -> html.Node(a) {
     form(toggle_event, popup(phase == cf.End, end_game_scoring)),
     view_game_info(model.gamestate),
     view_alert(model.alert),
-    html.div(
-      [attrs.class("board")],
-      [
-        html.div([attrs.class("deck")], []),
-        html.div(
-          [attrs.class("field")],
-          [
-            view_hand(model.gamestate, cf.Player2),
-            view_score_columns(model.gamestate, cf.Player2),
-            view_slots(model, cf.Player2),
-            view_score_totals(model.gamestate),
-            view_slots(model, cf.Player1),
-            view_score_columns(model.gamestate, cf.Player1),
-            view_hand(model.gamestate, cf.Player1),
-          ],
-        ),
-        view_card_pile(model.gamestate),
-      ],
-    ),
+    html.div([attrs.class("board")], [
+      html.div([attrs.class("deck")], []),
+      html.div([attrs.class("field")], [
+        view_hand(model.gamestate, cf.Player2),
+        view_score_columns(model.gamestate, cf.Player2),
+        view_slots(model, cf.Player2),
+        view_score_totals(model.gamestate),
+        view_slots(model, cf.Player1),
+        view_score_columns(model.gamestate, cf.Player1),
+        view_hand(model.gamestate, cf.Player1),
+      ]),
+      view_card_pile(model.gamestate),
+    ]),
   ])
 }
 
@@ -140,28 +135,21 @@ fn view_game_info(state: cf.GameState) -> html.Node(a) {
     cf.Player2 -> "Player 2"
   }
 
-  html.section(
-    [attrs.id("alert-message"), attrs.class("alerts")],
-    [
-      html.div(
-        [],
-        [
-          html.span_text([], "Deck size: " <> size),
-          html.span_text([], "Phase: " <> phase),
-          html.span_text([], "Current player: " <> player),
-        ],
-      ),
-    ],
-  )
+  html.section([attrs.id("alert-message"), attrs.class("alerts")], [
+    html.div([], [
+      html.span_text([], "Deck size: " <> size),
+      html.span_text([], "Phase: " <> phase),
+      html.span_text([], "Current player: " <> player),
+    ]),
+  ])
 }
 
 fn view_alert(message: Option(Alert)) -> html.Node(a) {
   case message {
     Some(a) -> {
-      html.section(
-        [attrs.id("alert-message"), attrs.class("alerts")],
-        [alert(a)],
-      )
+      html.section([attrs.id("alert-message"), attrs.class("alerts")], [
+        alert(a),
+      ])
     }
 
     None -> {
@@ -175,47 +163,34 @@ fn view_card_pile(state: cf.GameState) -> html.Node(a) {
   let p1_event = encode_draw_card(cf.Player1)
   let p2_event = encode_draw_card(cf.Player2)
 
-  html.div(
-    [attrs.class("deck")],
-    [
-      html.section(
-        [attrs.class("draw-pile")],
-        [form(p2_event, draw_deck(size))],
-      ),
-      html.section(
-        [attrs.class("draw-pile")],
-        [form(p1_event, draw_deck(size))],
-      ),
-    ],
-  )
+  html.div([attrs.class("deck")], [
+    html.section([attrs.class("draw-pile")], [form(p2_event, draw_deck(size))]),
+    html.section([attrs.class("draw-pile")], [form(p1_event, draw_deck(size))]),
+  ])
 }
 
 fn view_score_totals(state: cf.GameState) -> html.Node(a) {
   let totals = cf.score_totals(state)
 
-  html.section(
-    [attrs.class("scores")],
-    {
-      use score <- list.map(totals)
-      case score {
-        #(Some(player), total) -> {
-          let player = encode_player(player)
-          let score = int.to_string(total)
+  html.section([attrs.class("scores")], {
+    use score <- list.map(totals)
+    case score {
+      #(Some(player), total) -> {
+        let player = encode_player(player)
+        let score = int.to_string(total)
 
-          html.div(
-            [attrs.class("score" <> " " <> player)],
-            [html.span_text([], score)],
-          )
-        }
-
-        #(None, total) -> {
-          let score = int.to_string(total)
-
-          html.div([attrs.class("score")], [html.span_text([], score)])
-        }
+        html.div([attrs.class("score" <> " " <> player)], [
+          html.span_text([], score),
+        ])
       }
-    },
-  )
+
+      #(None, total) -> {
+        let score = int.to_string(total)
+
+        html.div([attrs.class("score")], [html.span_text([], score)])
+      }
+    }
+  })
 }
 
 fn view_score_columns(state: cf.GameState, player: cf.Player) -> html.Node(a) {
@@ -228,40 +203,37 @@ fn view_score_columns(state: cf.GameState, player: cf.Player) -> html.Node(a) {
 
   let player = encode_player(player)
 
-  html.section(
-    [attrs.class("scores")],
-    {
-      use score <- list.map(scores)
-      let card = int.to_string(score.score)
-      let formation = int.to_string(score.bonus_formation)
-      let flank = int.to_string(score.bonus_flank)
+  html.section([attrs.class("scores")], {
+    use score <- list.map(scores)
+    let card = int.to_string(score.score)
+    let formation = int.to_string(score.bonus_formation)
+    let flank = int.to_string(score.bonus_flank)
 
-      let card = [html.span_text([attrs.class("unit")], card)]
+    let card = [html.span_text([attrs.class("unit")], card)]
 
-      let formation = case score.bonus_formation {
-        0 -> []
+    let formation = case score.bonus_formation {
+      0 -> []
 
-        _ -> [
-          html.span_text([attrs.class("formation")], " + "),
-          html.span_text([attrs.class("formation")], formation),
-        ]
-      }
+      _ -> [
+        html.span_text([attrs.class("formation")], " + "),
+        html.span_text([attrs.class("formation")], formation),
+      ]
+    }
 
-      let flank = case score.bonus_flank {
-        0 -> []
+    let flank = case score.bonus_flank {
+      0 -> []
 
-        _ -> [
-          html.span_text([attrs.class("flank")], " + "),
-          html.span_text([attrs.class("flank")], flank),
-        ]
-      }
+      _ -> [
+        html.span_text([attrs.class("flank")], " + "),
+        html.span_text([attrs.class("flank")], flank),
+      ]
+    }
 
-      html.div(
-        [attrs.class("score" <> " " <> player)],
-        list.concat([card, formation, flank]),
-      )
-    },
-  )
+    html.div(
+      [attrs.class("score" <> " " <> player)],
+      list.concat([card, formation, flank]),
+    )
+  })
 }
 
 fn view_hand(state: cf.GameState, player: cf.Player) -> html.Node(a) {
@@ -269,13 +241,10 @@ fn view_hand(state: cf.GameState, player: cf.Player) -> html.Node(a) {
 
   html.section(
     [attrs.class("hand")],
-    list.map(
-      hand,
-      fn(card) {
-        let event = encode_select_card(player, card)
-        form(event, card_front(card))
-      },
-    ),
+    list.map(hand, fn(card) {
+      let event = encode_select_card(player, card)
+      form(event, card_front(card))
+    }),
   )
 }
 
@@ -284,33 +253,30 @@ fn view_slots(model: Model, player: cf.Player) -> html.Node(a) {
   let assert Ok(selected_card) = dict.get(model.selected_card, player)
   let player_class = encode_player(player)
 
-  html.section(
-    [attrs.class("slots")],
-    {
-      use slot_column <- list.map(columns)
-      let #(slot, column) = slot_column
+  html.section([attrs.class("slots")], {
+    use slot_column <- list.map(columns)
+    let #(slot, column) = slot_column
 
-      case selected_card {
-        Some(card) -> {
-          let event = encode_play_card(player, slot, card)
-          form(
-            event,
-            html.div(
-              [attrs.class("slot" <> " " <> player_class)],
-              list.map(column, card_front),
-            ),
-          )
-        }
-
-        None -> {
+    case selected_card {
+      Some(card) -> {
+        let event = encode_play_card(player, slot, card)
+        form(
+          event,
           html.div(
             [attrs.class("slot" <> " " <> player_class)],
             list.map(column, card_front),
-          )
-        }
+          ),
+        )
       }
-    },
-  )
+
+      None -> {
+        html.div(
+          [attrs.class("slot" <> " " <> player_class)],
+          list.map(column, card_front),
+        )
+      }
+    }
+  })
 }
 
 // --- View board components --- //
@@ -321,20 +287,17 @@ fn card_front(card: cf.Card) -> html.Node(a) {
 
   let rank = int.to_string(card.rank)
 
-  html.div(
-    [attrs.class("card front clouds " <> color)],
-    [
-      html.div(
-        [attrs.class("upper-left")],
-        [html.p_text([], rank), html.p_text([], utf)],
-      ),
-      html.div([attrs.class("graphic")], [html.p_text([], utf)]),
-      html.div(
-        [attrs.class("bottom-right")],
-        [html.p_text([], rank), html.p_text([], utf)],
-      ),
-    ],
-  )
+  html.div([attrs.class("card front clouds " <> color)], [
+    html.div([attrs.class("upper-left")], [
+      html.p_text([], rank),
+      html.p_text([], utf),
+    ]),
+    html.div([attrs.class("graphic")], [html.p_text([], utf)]),
+    html.div([attrs.class("bottom-right")], [
+      html.p_text([], rank),
+      html.p_text([], utf),
+    ]),
+  ])
 }
 
 fn card_back() -> html.Node(a) {
@@ -370,10 +333,7 @@ fn alert(alert: Alert) -> html.Node(a) {
     Bad(_) -> "error"
   }
 
-  html.div(
-    [attrs.class("alert " <> color)],
-    [html.span_text([], alert.message)],
-  )
+  html.div([attrs.class("alert " <> color)], [html.span_text([], alert.message)])
 }
 
 fn to_alert(error: cf.Errors) -> Alert {
@@ -477,40 +437,28 @@ fn end_game_scoring(state: cf.GameState) -> html.Node(a) {
   let p2_form_total = list.fold(p2_scores, 0, sum_form)
   let p2_flank_total = list.fold(p2_scores, 0, sum_flank)
 
-  html.div(
-    [attrs.class("sparkle")],
-    [
-      html.Fragment([
-        html.div([attrs.class("score-winner")], [html.h1_text([], "Game!")]),
-        html.div(
-          [attrs.class("score-group")],
-          [
-            html.div(
-              [],
-              [
-                group_table(p1_score_group),
-                html.Element("hr", [], []),
-                subtotals_table(p1_card_total, p1_form_total, p1_flank_total),
-                html.Element("hr", [], []),
-                totals_table(p1_card_total + p1_form_total + p1_flank_total),
-              ],
-            ),
-            html.div(
-              [],
-              [
-                group_table(p2_score_group),
-                html.Element("hr", [], []),
-                subtotals_table(p2_card_total, p2_form_total, p2_flank_total),
-                html.Element("hr", [], []),
-                totals_table(p2_card_total + p2_form_total + p2_flank_total),
-              ],
-            ),
-          ],
-        ),
-        winner(total),
+  html.div([attrs.class("sparkle")], [
+    html.Fragment([
+      html.div([attrs.class("score-winner")], [html.h1_text([], "Game!")]),
+      html.div([attrs.class("score-group")], [
+        html.div([], [
+          group_table(p1_score_group),
+          html.Element("hr", [], []),
+          subtotals_table(p1_card_total, p1_form_total, p1_flank_total),
+          html.Element("hr", [], []),
+          totals_table(p1_card_total + p1_form_total + p1_flank_total),
+        ]),
+        html.div([], [
+          group_table(p2_score_group),
+          html.Element("hr", [], []),
+          subtotals_table(p2_card_total, p2_form_total, p2_flank_total),
+          html.Element("hr", [], []),
+          totals_table(p2_card_total + p2_form_total + p2_flank_total),
+        ]),
       ]),
-    ],
-  )
+      winner(total),
+    ]),
+  ])
 }
 
 fn group_table(group: ScoreGroup) -> html.Node(a) {
@@ -525,95 +473,68 @@ fn group_table(group: ScoreGroup) -> html.Node(a) {
   }
 
   let data = [
-    #(
-      "Straight Flush",
-      group.straight_flush.0,
-      [suit(cf.Spade, 3), suit(cf.Spade, 2), suit(cf.Spade, 1)],
-    ),
-    #(
-      "Three of Kind",
-      group.three_of_a_kind.0,
-      [suit(cf.Spade, 7), suit(cf.Diamond, 7), suit(cf.Club, 7)],
-    ),
-    #(
-      "Straight",
-      group.straight.0,
-      [suit(cf.Heart, 6), suit(cf.Club, 5), suit(cf.Spade, 4)],
-    ),
-    #(
-      "Flush",
-      group.flush.0,
-      [suit(cf.Heart, 8), suit(cf.Heart, 4), suit(cf.Heart, 2)],
-    ),
+    #("Straight Flush", group.straight_flush.0, [
+      suit(cf.Spade, 3),
+      suit(cf.Spade, 2),
+      suit(cf.Spade, 1),
+    ]),
+    #("Three of Kind", group.three_of_a_kind.0, [
+      suit(cf.Spade, 7),
+      suit(cf.Diamond, 7),
+      suit(cf.Club, 7),
+    ]),
+    #("Straight", group.straight.0, [
+      suit(cf.Heart, 6),
+      suit(cf.Club, 5),
+      suit(cf.Spade, 4),
+    ]),
+    #("Flush", group.flush.0, [
+      suit(cf.Heart, 8),
+      suit(cf.Heart, 4),
+      suit(cf.Heart, 2),
+    ]),
     #("Pair", group.pair.0, [suit(cf.Club, 4), suit(cf.Diamond, 4)]),
   ]
 
-  html.table(
-    [],
-    [
-      html.tbody(
-        [],
-        {
-          use #(name, count, suit) <- list.map(data)
-          html.tr(
-            [],
-            [
-              html.td([], [html.div_text([], name), html.div([], suit)]),
-              html.td_text([], "x" <> s(count)),
-            ],
-          )
-        },
-      ),
-    ],
-  )
+  html.table([], [
+    html.tbody([], {
+      use #(name, count, suit) <- list.map(data)
+      html.tr([], [
+        html.td([], [html.div_text([], name), html.div([], suit)]),
+        html.td_text([], "x" <> s(count)),
+      ])
+    }),
+  ])
 }
 
 fn subtotals_table(card: Int, formation: Int, flank: Int) -> html.Node(a) {
-  html.table(
-    [],
-    [
-      html.tbody(
-        [],
-        [
-          html.tr(
-            [],
-            [
-              html.td_text([], "Cards Played"),
-              html.td_text([], int.to_string(card)),
-            ],
-          ),
-          html.tr(
-            [],
-            [
-              html.td_text([], "Formation"),
-              html.td_text([], int.to_string(formation)),
-            ],
-          ),
-          html.tr(
-            [],
-            [html.td_text([], "Flank"), html.td_text([], int.to_string(flank))],
-          ),
-        ],
-      ),
-    ],
-  )
+  html.table([], [
+    html.tbody([], [
+      html.tr([], [
+        html.td_text([], "Cards Played"),
+        html.td_text([], int.to_string(card)),
+      ]),
+      html.tr([], [
+        html.td_text([], "Formation"),
+        html.td_text([], int.to_string(formation)),
+      ]),
+      html.tr([], [
+        html.td_text([], "Flank"),
+        html.td_text([], int.to_string(flank)),
+      ]),
+    ]),
+  ])
 }
 
 fn totals_table(total: Int) -> html.Node(a) {
-  html.table(
-    [],
-    [
-      html.tbody(
-        [],
-        [
-          html.tr(
-            [],
-            [html.td_text([], "Total"), html.td_text([], int.to_string(total))],
-          ),
-        ],
-      ),
-    ],
-  )
+  html.table([], [
+    html.tbody([], [
+      html.tr([], [
+        html.td_text([], "Total"),
+        html.td_text([], int.to_string(total)),
+      ]),
+    ]),
+  ])
 }
 
 fn winner(total: #(Option(cf.Player), Int)) -> html.Node(a) {
@@ -623,10 +544,10 @@ fn winner(total: #(Option(cf.Player), Int)) -> html.Node(a) {
     #(None, total) -> #("DRAW", int.to_string(total))
   }
 
-  html.div(
-    [attrs.class("score-winner")],
-    [html.h2_text([], total.0), html.h3_text([], total.1)],
-  )
+  html.div([attrs.class("score-winner")], [
+    html.h2_text([], total.0),
+    html.h3_text([], total.1),
+  ])
 }
 
 // --- View HTML Helpers --- //
@@ -688,6 +609,7 @@ fn generate_name() -> String {
 pub fn decode_message(
   params: List(#(String, String)),
 ) -> Result(Message, String) {
+  io.debug(params)
   case params {
     [#("action", "draw-card"), #("player", player)] -> {
       use player <- try(decode_player(player))
@@ -696,10 +618,10 @@ pub fn decode_message(
 
     [
       #("action", "play-card"),
-      #("card_rank", rank),
-      #("card_suit", suit),
       #("player", player),
       #("slot", slot),
+      #("card_rank", rank),
+      #("card_suit", suit),
     ] -> {
       use player <- try(decode_player(player))
       use slot <- try(decode_slot(slot))
@@ -710,9 +632,9 @@ pub fn decode_message(
 
     [
       #("action", "select-card"),
+      #("player", player),
       #("card_rank", rank),
       #("card_suit", suit),
-      #("player", player),
     ] -> {
       use player <- try(decode_player(player))
       use suit <- try(decode_card_suit(suit))
@@ -743,15 +665,12 @@ fn encode_select_card(player: cf.Player, card: cf.Card) -> Event {
   let suit = encode_card_suit(card.suit)
   let id = string.join([action, player, rank, suit], "-")
 
-  Event(
-    id: id,
-    data: [
-      #("action", "select-card"),
-      #("player", player),
-      #("card_rank", rank),
-      #("card_suit", suit),
-    ],
-  )
+  Event(id: id, data: [
+    #("action", "select-card"),
+    #("player", player),
+    #("card_rank", rank),
+    #("card_suit", suit),
+  ])
 }
 
 fn encode_play_card(player: cf.Player, slot: cf.Slot, card: cf.Card) -> Event {
@@ -760,16 +679,13 @@ fn encode_play_card(player: cf.Player, slot: cf.Slot, card: cf.Card) -> Event {
   let slot = encode_slot(slot)
   let id = string.join([action, player, slot], "-")
 
-  Event(
-    id: id,
-    data: [
-      #("action", "play-card"),
-      #("player", player),
-      #("slot", slot),
-      #("card_rank", encode_card_rank(card.rank)),
-      #("card_suit", encode_card_suit(card.suit)),
-    ],
-  )
+  Event(id: id, data: [
+    #("action", "play-card"),
+    #("player", player),
+    #("slot", slot),
+    #("card_rank", encode_card_rank(card.rank)),
+    #("card_suit", encode_card_suit(card.suit)),
+  ])
 }
 
 fn encode_toggle_scoring() -> Event {
@@ -876,13 +792,10 @@ fn decode(encoding: List(#(x, y)), value: y) -> Result(x, Nil) {
 }
 
 fn key_find(pairs: List(#(x, y)), key: x) -> Result(y, Nil) {
-  list.find_map(
-    pairs,
-    fn(pair) {
-      case pair.0 == key {
-        True -> Ok(pair.1)
-        False -> Error(pair.1)
-      }
-    },
-  )
+  list.find_map(pairs, fn(pair) {
+    case pair.0 == key {
+      True -> Ok(pair.1)
+      False -> Error(pair.1)
+    }
+  })
 }

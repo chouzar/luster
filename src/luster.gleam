@@ -1,9 +1,10 @@
 import gleam/erlang/process
-import luster/web
+import gleam/http/request
+import gleam/http/response
 import luster/store
-import mist
-import wisp
+import luster/web
 import luster/web/pages/game
+import mist
 
 //import gleam/erlang/process
 // TODO: Rename this project as card-field, line-poker, battle-group
@@ -21,24 +22,21 @@ import luster/web/pages/game
 
 pub fn main() -> Nil {
   // Grab this secret from somewhere
-  let secret_key_base = wisp.random_string(64)
-
   let assert Ok(store) = store.start()
 
-  let context = web.Context(store: store, assets_path: priv("/assets"))
+  let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
+    mist.ResponseData,
+  ) {
+    let context = web.Context(store: store, params: [])
 
-  store.create(store, game.init())
+    web.router(request, context)
+  }
 
   let assert Ok(Nil) =
-    wisp.mist_handler(web.pipeline(_, context), secret_key_base)
-    |> mist.new()
+    mist.new(request_pipeline)
     |> mist.port(4444)
     |> mist.start_http()
 
+  store.create(store, game.init())
   process.sleep_forever()
-}
-
-fn priv(path: String) -> String {
-  let assert Ok(directory) = wisp.priv_directory("luster")
-  directory <> path
 }
