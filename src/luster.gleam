@@ -1,3 +1,4 @@
+import envoy
 import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response
@@ -35,8 +36,18 @@ pub fn main() -> Nil {
   let assert Ok(Nil) =
     mist.new(request_pipeline)
     |> mist.port(4444)
-    |> mist.start_http()
+    |> mist.start_https(
+      certfile: env("LUSTER_CERT"),
+      keyfile: env("LUSTER_KEY"),
+    )
 
   store.create(store, game.init())
   process.sleep_forever()
+}
+
+fn env(key: String) -> String {
+  case envoy.get(key) {
+    Ok(value) -> value
+    Error(Nil) -> panic as "unable to find " <> key
+  }
 }
