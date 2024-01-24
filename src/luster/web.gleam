@@ -1,32 +1,36 @@
+import gleam/bit_array
+import gleam/bytes_builder
+import gleam/erlang
+import gleam/erlang/process
 import gleam/http
-import mist
+import gleam/http/request
+import gleam/http/response
+import gleam/int
+import gleam/string
+import gleam/uri
+import luster/events
 import luster/store
 import luster/web/pages/game
 import luster/web/pages/home
-import gleam/http/request
-import gleam/http/response
-import gleam/erlang
-import gleam/string
-import gleam/int
-import gleam/bit_array
-import gleam/bytes_builder
+import luster/web/pages/layout
+import mist
 import nakai
 import nakai/html
-import nakai/html/attrs
-import gleam/uri
-import gleam/io
 
 // --- Middleware and Routing --- //
 
-// TODO: Use SSE events as a way of executing UI commands as in Elm
 // TODO: La alternativa es un evento ShowAlert + redirect
-pub type Context(record, html) {
-  Context(store: store.Store(record), params: List(#(String, String)))
+pub type Context(record, html, message) {
+  Context(
+    store: store.Store(record),
+    params: List(#(String, String)),
+    selector: process.Selector(message),
+  )
 }
 
 pub fn router(
   request: request.Request(mist.Connection),
-  context: Context(game.Model, a),
+  context: Context(game.Model, html, message),
 ) -> response.Response(mist.ResponseData) {
   case request.method, request.path_segments(request) {
     http.Get, [] -> {
@@ -34,7 +38,7 @@ pub fn router(
 
       home.Model(records)
       |> home.view()
-      |> render(with: layout)
+      |> render(with: layout.view)
     }
 
     http.Post, ["battleline"] -> {
@@ -49,7 +53,7 @@ pub fn router(
 
       model
       |> game.view()
-      |> render(with: layout)
+      |> render(with: layout.view)
     }
 
     http.Post, ["battleline", id] -> {
@@ -66,6 +70,10 @@ pub fn router(
       redirect("/battleline/" <> id)
     }
 
+    http.Get, ["events"] -> {
+      events.start(request)
+    }
+
     http.Get, ["assets", ..] -> {
       serve_assets(request)
     }
@@ -74,40 +82,6 @@ pub fn router(
       not_found()
     }
   }
-}
-
-fn layout(body: html.Node(a)) -> html.Node(a) {
-  html.Html([], [
-    html.Head([
-      html.title("Line Poker"),
-      html.meta([attrs.name("viewport"), attrs.content("width=device-width")]),
-      html.link([
-        attrs.rel("icon"),
-        attrs.type_("image/x-icon"),
-        attrs.href("/assets/favicon.ico"),
-      ]),
-      html.link([
-        attrs.rel("stylesheet"),
-        attrs.type_("text/css"),
-        attrs.href("/assets/styles.css"),
-      ]),
-      html.link([
-        attrs.rel("stylesheet"),
-        attrs.type_("text/css"),
-        attrs.href("/assets/ztyles.css"),
-      ]),
-    ]),
-    //script("/assets/hotwired-turbo.js"),
-    html.Body([], [body]),
-  ])
-}
-
-fn script(source: String) {
-  html.Element(
-    tag: "script",
-    attrs: [attrs.src(source), attrs.defer()],
-    children: [],
-  )
 }
 
 // https://www.iana.org/assignments/media-types/media-types.xhtml
@@ -149,18 +123,12 @@ fn not_found() -> response.Response(mist.ResponseData) {
 fn serve_assets(
   request: request.Request(mist.Connection),
 ) -> response.Response(mist.ResponseData) {
-  io.debug(request.path)
   let assert Ok(root) = erlang.priv_directory("luster")
   let assert asset = string.join([root, request.path], "")
 
   case read_file(asset) {
     Ok(asset) -> {
-      let mime =
-        extract_mime(request.path)
-        |> io.debug()
-
-      content_type(mime)
-      |> io.debug()
+      let mime = extract_mime(request.path)
 
       response.new(200)
       |> response.prepend_header("content-type", content_type(mime))
@@ -195,11 +163,8 @@ fn content_type(mime: MIME) -> String {
 fn extract_mime(path: String) -> MIME {
   let ext =
     path
-    |> io.debug()
     |> string.lowercase()
-    |> io.debug()
     |> extension()
-    |> io.debug()
 
   case ext {
     ".css" -> CSS

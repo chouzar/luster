@@ -8,7 +8,6 @@ import luster/game/cardfield as cf
 import gleam/int
 import nakai/html
 import nakai/html/attrs
-import gleam/io
 
 // --- Elmish Game --- //
 
@@ -609,7 +608,6 @@ fn generate_name() -> String {
 pub fn decode_message(
   params: List(#(String, String)),
 ) -> Result(Message, String) {
-  io.debug(params)
   case params {
     [#("action", "draw-card"), #("player", player)] -> {
       use player <- try(decode_player(player))

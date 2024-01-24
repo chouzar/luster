@@ -1,7 +1,7 @@
-import gleam/list
-import gleam/int
-import gleam/order
 import gleam/erlang/process
+import gleam/int
+import gleam/list
+import gleam/order
 import gleam/otp/actor
 
 type State(x) {
