@@ -1,18 +1,21 @@
-const p1_hand = document.querySelector(".board .hand:nth-child(1)");
-const p2_hand = document.querySelector(".board .hand:nth-child(2)");
+const session = document.querySelector("meta[name='session']").content;
+const body = document.querySelector("body");
 
-const exampleSocket = new WebSocket(
-  "wss://localhost:4444/events",
-  "protocolOne",
-);
+const socket = new WebSocket("wss://localhost:4444/events");
 
-exampleSocket.onopen = (_event) => {
-  exampleSocket.send("start: " + self.crypto.randomUUID());
+socket.onopen = (_event) => {
 };
 
-exampleSocket.onmessage = (event) => {
-  console.log(event);
-  console.log(event.data);
-  
-  p1_hand.insertAdjacentHTML("beforeend", "<div>Hello World!</div>")
+socket.onmessage = (event) => {
+  let [html, ...rest] = event.data.split("\n\n")
+  body.innerHTML = html
 };
+
+window.addEventListener('click', (event) => {
+  console.log(event.target);
+  if (event.target.dataset.event) {
+    const action = event.target.dataset.event
+    const data = JSON.stringify(event.target.dataset);
+    socket.send(new Blob([session, "\n\n", action, "\n\n", data]));
+  }
+});

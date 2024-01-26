@@ -17,6 +17,17 @@
   --yellow: #f0f2b7f0;
 }
 
+div[data-event]>* {
+  pointer-events: none;
+}
+
+div[data-event="popup-toggle"] {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  top: 0;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -25,7 +36,6 @@ body {
 
 .popup {
   position: absolute;
-  z-index: 30;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -39,8 +49,10 @@ body {
   border-radius: 5px;
 }
 
-.popup h1, .popup h2, .popup h3 {
- margin: 0; 
+.popup h1,
+.popup h2,
+.popup h3 {
+  margin: 0;
 }
 
 .lobby-games {
@@ -91,7 +103,7 @@ button {
 }
 
 .board .scoring {
- padding:20px; 
+  padding: 20px;
   flex-grow: 2;
   display: flex;
   justify-content: center;
@@ -99,14 +111,15 @@ button {
 }
 
 .cheatsheet {
- font-size: 1.5vh;
- min-width: 250px;
- border-collapse: collapse;
- background-color: var(--white);
+  font-size: 1.5vh;
+  min-width: 250px;
+  border-collapse: collapse;
+  background-color: var(--white);
 }
 
-.cheatsheet th, .cheatsheet td {
- border: 1px solid var(--gray);
+.cheatsheet th,
+.cheatsheet td {
+  border: 1px solid var(--gray);
 }
 
 .cheatsheet tr {
@@ -115,32 +128,34 @@ button {
 }
 
 .score-winner {
- padding: 1vh 0 1vh 0;  
+  padding: 1vh 0 1vh 0;
 }
 
 .score-group {
   display: flex;
-  font-size: 2.25vh; 
+  font-size: 2.25vh;
   padding: 2vh 0 2vh 0;
   background-color: var(--yellow);
 }
 
-.score-group > div {
+.score-group>div {
   padding: 0 2vh 0 2vh;
 }
 
-.score-group  table {
+.score-group table {
   width: 100%;
 }
 
-.score-group  table td {
- padding: 5px 10px; 
+.score-group table td {
+  padding: 5px 10px;
 }
-.score-group  table td:nth-child(1) {
+
+.score-group table td:nth-child(1) {
   text-align: left;
   font-size: 3vh;
 }
-.score-group  table td:nth-child(2) {
+
+.score-group table td:nth-child(2) {
   text-align: right;
   font-size: 3.25vh;
 }
@@ -249,13 +264,12 @@ button {
   align-items: center;
 }
 
-.board>.deck>.draw-pile {
+.draw-pile {
   position: relative;
   height: 10.5vh;
   width: 7.5vh;
   margin: 1vh;
 }
-
 
 .board>.field>.slots {
   display: flex;
@@ -364,6 +378,7 @@ button {
   margin: 0.25em;
   font-size: 1em;
 }
+
 .draw-pile .card {
   position: absolute;
   margin: 0px;
@@ -444,8 +459,7 @@ button {
   outline: 1px solid #d070b8;
   color: var(--not-black);
   background:
-    repeating-linear-gradient(
-      40deg,
+    repeating-linear-gradient(40deg,
       #ffd596 1em,
       #ffd596 2em,
       #fdffab 2em,
@@ -455,10 +469,8 @@ button {
       #9ce7ff 4em,
       #9ce7ff 5em,
       #dcd2fb 5em,
-      #dcd2fb 6em
-    ),
-    repeating-linear-gradient(
-      -75deg,
+      #dcd2fb 6em),
+    repeating-linear-gradient(-75deg,
       #ffd596 1em,
       #ffd596 2em,
       #fdffab 2em,
@@ -468,8 +480,7 @@ button {
       #9ce7ff 4em,
       #9ce7ff 5em,
       #dcd2fb 5em,
-      #dcd2fb 6em
-    );
-    
+      #dcd2fb 6em);
+
   background-blend-mode: multiply;
 }
