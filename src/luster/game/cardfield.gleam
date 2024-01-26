@@ -169,7 +169,8 @@ pub fn next(state: GameState, action: Action) -> Result(GameState, Errors) {
           True ->
             GameState(
               ..state,
-              turn: state.turn + 1,
+              turn: state.turn
+              + 1,
               sequence: rotate(state.sequence),
               phase: Play,
             )
@@ -313,10 +314,9 @@ fn new_line(of piece: piece) -> Line(piece) {
 
 fn new_total_score() -> TotalScore {
   TotalScore(
-    columns: list.map(
-      slots,
-      fn(_) { #(Score(0, 0, 0, HighCard), Score(0, 0, 0, HighCard)) },
-    ),
+    columns: list.map(slots, fn(_) {
+      #(Score(0, 0, 0, HighCard), Score(0, 0, 0, HighCard))
+    }),
     totals: list.map(slots, fn(_) { figure_player(0) }),
     total: #(None, 0),
   )
@@ -470,32 +470,26 @@ fn calculate_total_score(state: GameState) -> TotalScore {
 
 fn calculate_columns(state: GameState) -> List(#(Score, Score)) {
   let columns =
-    list.index_map(
-      slots,
-      fn(slot, index) {
-        let assert Ok(#(s1, s2)) = list.at(state.total_score.columns, index)
+    list.index_map(slots, fn(slot, index) {
+      let assert Ok(#(s1, s2)) = list.at(state.total_score.columns, index)
 
-        let battle = get(state.board.battleline, slot)
-        let column_p1 = get(battle, Player1)
-        let column_p2 = get(battle, Player2)
+      let battle = get(state.board.battleline, slot)
+      let column_p1 = get(battle, Player1)
+      let column_p2 = get(battle, Player2)
 
-        #(score(column_p1, s1.bonus_flank), score(column_p2, s2.bonus_flank))
-      },
-    )
+      #(score(column_p1, s1.bonus_flank), score(column_p2, s2.bonus_flank))
+    })
 
   let flanks = flank_bonuses(columns)
 
   let columns =
-    list.map(
-      slots,
-      fn(slot) {
-        let battle = get(state.board.battleline, slot)
-        let column_p1 = get(battle, Player1)
-        let column_p2 = get(battle, Player2)
+    list.map(slots, fn(slot) {
+      let battle = get(state.board.battleline, slot)
+      let column_p1 = get(battle, Player1)
+      let column_p2 = get(battle, Player2)
 
-        #(score(column_p1, 0), score(column_p2, 0))
-      },
-    )
+      #(score(column_p1, 0), score(column_p2, 0))
+    })
 
   list.zip(columns, flanks)
   |> list.map(fn(scores) {
@@ -555,18 +549,15 @@ fn flank_bonuses(scores: List(#(Score, Score))) -> List(Option(Player)) {
 }
 
 fn calculate_totals(scores: List(#(Score, Score))) -> List(Int) {
-  list.map(
-    scores,
-    fn(score) {
-      let #(score_p1, score_p2) = score
+  list.map(scores, fn(score) {
+    let #(score_p1, score_p2) = score
 
-      let score_p1 =
-        score_p1.score + score_p1.bonus_formation + score_p1.bonus_flank
-      let score_p2 =
-        score_p2.score + score_p2.bonus_formation + score_p2.bonus_flank
-      score_p1 - score_p2
-    },
-  )
+    let score_p1 =
+      score_p1.score + score_p1.bonus_formation + score_p1.bonus_flank
+    let score_p2 =
+      score_p2.score + score_p2.bonus_formation + score_p2.bonus_flank
+    score_p1 - score_p2
+  })
 }
 
 fn calculate_total(scores: List(Int)) -> Int {

@@ -7,7 +7,7 @@ import nakai/html/attrs
 // --- Elmish Lobby --- //
 
 pub type Model(r) {
-  Model(games: List(#(Int, r)))
+  Model(games: List(#(String, r)))
 }
 
 pub fn view(model: Model(r)) -> html.Node(a) {
@@ -21,15 +21,12 @@ pub fn view(model: Model(r)) -> html.Node(a) {
 
 fn create_game_form() -> html.Node(a) {
   // TODO: This form makes me thing that the full HTTP request needs to be encoded
-  html.form(
-    [attrs.method("post"), attrs.action("/battleline")],
-    [html.input([attrs.type_("submit"), attrs.value("Create new game")])],
-  )
+  html.form([attrs.method("post"), attrs.action("/battleline")], [
+    html.input([attrs.type_("submit"), attrs.value("Create new game")]),
+  ])
 }
 
-fn listed_lobby_game(id: Int) -> html.Node(a) {
-  let id = int.to_string(id)
-
+fn listed_lobby_game(id: String) -> html.Node(a) {
   let anchor = html.a_text([attrs.href("/battleline/" <> id)], nth(id))
   html.li([], [anchor])
 }

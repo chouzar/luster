@@ -1,77 +1,53 @@
 import gleam/bit_array
 import gleam/bytes_builder
 import gleam/erlang
-import gleam/erlang/process
 import gleam/http
 import gleam/http/request
 import gleam/http/response
-import gleam/int
 import gleam/string
 import gleam/uri
 import luster/events
 import luster/store
 import luster/web/pages/game
 import luster/web/pages/home
-import luster/web/pages/layout
 import mist
 import nakai
 import nakai/html
-
-// --- Middleware and Routing --- //
-
-// TODO: La alternativa es un evento ShowAlert + redirect
-pub type Context(record, html, message) {
-  Context(
-    store: store.Store(record),
-    params: List(#(String, String)),
-    selector: process.Selector(message),
-  )
-}
+import nakai/html/attrs
+import luster/session
 
 pub fn router(
   request: request.Request(mist.Connection),
-  context: Context(game.Model, html, message),
+  session: session.Session(game.Model, message),
 ) -> response.Response(mist.ResponseData) {
   case request.method, request.path_segments(request) {
     http.Get, [] -> {
-      let records = store.all(context.store)
+      let records = store.all(session.store)
 
       home.Model(records)
       |> home.view()
-      |> render(with: layout.view)
+      |> render(with: fn(body) { layout("", body) })
     }
 
     http.Post, ["battleline"] -> {
       let model = game.init()
-      let _id = store.create(context.store, model)
+      let _ = store.create(session.store, model)
       redirect("/")
     }
 
     http.Get, ["battleline", id] -> {
-      let assert Ok(select_id) = int.parse(id)
-      let assert Ok(model) = store.one(context.store, select_id)
+      case store.one(session.store, id) {
+        Ok(model) ->
+          model
+          |> game.view()
+          |> render(with: fn(body) { layout(id, body) })
 
-      model
-      |> game.view()
-      |> render(with: layout.view)
-    }
-
-    http.Post, ["battleline", id] -> {
-      let params = process_form(request)
-      let assert Ok(select_id) = int.parse(id)
-      let assert Ok(model) = store.one(context.store, select_id)
-      let assert Ok(message) = game.decode_message(params)
-
-      let _ =
-        model
-        |> game.update(message)
-        |> store.update(context.store, select_id, _)
-
-      redirect("/battleline/" <> id)
+        Error(_) -> redirect("/")
+      }
     }
 
     http.Get, ["events"] -> {
-      events.start(request)
+      events.start(request, session)
     }
 
     http.Get, ["assets", ..] -> {
@@ -82,6 +58,34 @@ pub fn router(
       not_found()
     }
   }
+}
+
+fn layout(session: String, body: html.Node(a)) -> html.Node(a) {
+  html.Html([], [
+    html.Head([
+      html.title("Line Poker"),
+      html.meta([attrs.name("viewport"), attrs.content("width=device-width")]),
+      html.meta([attrs.name("session"), attrs.content(session)]),
+      html.link([
+        attrs.rel("icon"),
+        attrs.type_("image/x-icon"),
+        attrs.defer(),
+        attrs.href("/assets/favicon.ico"),
+      ]),
+      html.link([
+        attrs.rel("stylesheet"),
+        attrs.type_("text/css"),
+        attrs.defer(),
+        attrs.href("/assets/styles.css"),
+      ]),
+      html.Element(
+        tag: "script",
+        attrs: [attrs.src("/assets/script.js"), attrs.defer()],
+        children: [],
+      ),
+    ]),
+    html.Body([], [body]),
+  ])
 }
 
 // https://www.iana.org/assignments/media-types/media-types.xhtml

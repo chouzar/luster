@@ -6,7 +6,8 @@ import luster/store
 import luster/web
 import luster/web/pages/game
 import mist
-import gleam/io
+import chip
+import luster/session
 
 // TODO: Create a web, games and luster/runtime contexts
 // TODO: Add a proper supervision tree
@@ -17,20 +18,17 @@ import gleam/io
 //  })
 
 pub fn main() -> Nil {
-  // Grab this secret from somewhere
   let assert Ok(store) = store.start()
-
-  let selector: process.Selector(x) = process.new_selector()
+  let assert Ok(registry) = chip.start()
+  let session = session.Session(store: store, registry: registry)
 
   let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
     mist.ResponseData,
   ) {
-    let context = web.Context(store: store, params: [], selector: selector)
-
-    web.router(request, context)
+    web.router(request, session)
   }
 
-  let assert Ok(Nil) =
+  let assert Ok(_server) =
     mist.new(request_pipeline)
     |> mist.port(4444)
     |> mist.start_https(
@@ -45,6 +43,6 @@ pub fn main() -> Nil {
 fn env(key: String) -> String {
   case envoy.get(key) {
     Ok(value) -> value
-    Error(Nil) -> panic as "unable to find " <> key
+    Error(Nil) -> panic as "unable to find ENV"
   }
 }
