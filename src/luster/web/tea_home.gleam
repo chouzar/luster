@@ -1,6 +1,5 @@
 import gleam/pair
 import gleam/list
-import gleam/int
 import nakai/html
 import nakai/html/attrs
 

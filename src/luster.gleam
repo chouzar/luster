@@ -4,10 +4,9 @@ import gleam/http/request
 import gleam/http/response
 import luster/store
 import luster/web
-import luster/web/pages/game
+import luster/web/tea_game
 import mist
 import chip
-import luster/session
 
 // TODO: Create a web, games and luster/runtime contexts
 // TODO: Add a proper supervision tree
@@ -20,12 +19,11 @@ import luster/session
 pub fn main() -> Nil {
   let assert Ok(store) = store.start()
   let assert Ok(registry) = chip.start()
-  let session = session.Session(store: store, registry: registry)
 
   let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
     mist.ResponseData,
   ) {
-    web.router(request, session)
+    web.router(request, registry, store)
   }
 
   let assert Ok(_server) =
@@ -36,7 +34,7 @@ pub fn main() -> Nil {
       keyfile: env("LUSTER_KEY"),
     )
 
-  store.create(store, game.init())
+  store.create(store, tea_game.init())
   process.sleep_forever()
 }
 

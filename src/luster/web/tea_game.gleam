@@ -1,10 +1,10 @@
+import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/pair
-import gleam/list
 import gleam/result.{try}
+import luster/game as g
 import luster/web/codec
-import luster/game/cardfield as cf
-import gleam/int
 import nakai/html
 import nakai/html/attrs
 
@@ -14,16 +14,16 @@ pub type Model {
   Model(
     name: String,
     alert: Option(Alert),
-    selected_card: Option(cf.Card),
+    selected_card: Option(g.Card),
     toggle_scoring: Bool,
-    gamestate: cf.GameState,
+    gamestate: g.GameState,
   )
 }
 
 pub type Message {
-  DrawCard(player: cf.Player)
-  SelectCard(card: cf.Card)
-  PlayCard(slot: cf.Slot)
+  DrawCard(player: g.Player)
+  SelectCard(card: g.Card)
+  PlayCard(slot: g.Slot)
   ToggleScoring
 }
 
@@ -39,15 +39,15 @@ pub fn init() -> Model {
     alert: None,
     selected_card: None,
     toggle_scoring: True,
-    gamestate: cf.new(),
+    gamestate: g.new(),
   )
 }
 
 pub fn update(model: Model, message: Message) -> Model {
   let result = case message {
     DrawCard(player) -> {
-      let message = cf.DrawCard(player)
-      use gamestate <- try(cf.next(model.gamestate, message))
+      let message = g.DrawCard(player)
+      use gamestate <- try(g.next(model.gamestate, message))
       Ok(Model(..model, gamestate: gamestate))
     }
 
@@ -56,10 +56,10 @@ pub fn update(model: Model, message: Message) -> Model {
     }
 
     PlayCard(slot) -> {
-      let player = cf.current_player(model.gamestate)
-      use card <- try(option.to_result(model.selected_card, cf.NoCardInHand))
-      let message = cf.PlayCard(player, slot, card)
-      use gamestate <- try(cf.next(model.gamestate, message))
+      let player = g.current_player(model.gamestate)
+      use card <- try(option.to_result(model.selected_card, g.NoCardInHand))
+      let message = g.PlayCard(player, slot, card)
+      use gamestate <- try(g.next(model.gamestate, message))
       Ok(Model(..model, gamestate: gamestate))
     }
 
@@ -75,7 +75,7 @@ pub fn update(model: Model, message: Message) -> Model {
 }
 
 pub fn view(model: Model) -> html.Node(a) {
-  let phase = cf.current_phase(model.gamestate)
+  let phase = g.current_phase(model.gamestate)
 
   html.Fragment([
     view_game_info(model.gamestate),
@@ -84,20 +84,20 @@ pub fn view(model: Model) -> html.Node(a) {
       html.div([attrs.class("deck")], []),
       html.div([attrs.class("field")], [
         html.section([attrs.class("hand")], [
-          view_hand(model.gamestate, cf.Player2),
+          view_hand(model.gamestate, g.Player2),
         ]),
-        view_score_columns(model.gamestate, cf.Player2),
-        view_slots(model, cf.Player2),
+        view_score_columns(model.gamestate, g.Player2),
+        view_slots(model, g.Player2),
         view_score_totals(model.gamestate),
-        view_slots(model, cf.Player1),
-        view_score_columns(model.gamestate, cf.Player1),
+        view_slots(model, g.Player1),
+        view_score_columns(model.gamestate, g.Player1),
         html.section([attrs.class("hand")], [
-          view_hand(model.gamestate, cf.Player1),
+          view_hand(model.gamestate, g.Player1),
         ]),
       ]),
       view_card_pile(model.gamestate),
     ]),
-    popup(phase == cf.End, case model.toggle_scoring {
+    popup(phase == g.End, case model.toggle_scoring {
       True -> end_game_scoring(model.gamestate)
       False -> html.Nothing
     }),
@@ -106,21 +106,21 @@ pub fn view(model: Model) -> html.Node(a) {
 
 // --- View board segments --- //
 
-fn view_game_info(state: cf.GameState) -> html.Node(a) {
+fn view_game_info(state: g.GameState) -> html.Node(a) {
   let size =
-    cf.deck_size(state)
+    g.deck_size(state)
     |> int.to_string()
 
-  let phase = case cf.current_turn(state), cf.current_phase(state) {
-    0, cf.Draw -> "Initial Draw"
-    _, cf.Draw -> "Draw Card Phase"
-    _, cf.Play -> "Play Card Phase"
-    _, cf.End -> "Game!"
+  let phase = case g.current_turn(state), g.current_phase(state) {
+    0, g.Draw -> "Initial Draw"
+    _, g.Draw -> "Draw Card Phase"
+    _, g.Play -> "Play Card Phase"
+    _, g.End -> "Game!"
   }
 
-  let player = case cf.current_player(state) {
-    cf.Player1 -> "Player 1"
-    cf.Player2 -> "Player 2"
+  let player = case g.current_player(state) {
+    g.Player1 -> "Player 1"
+    g.Player2 -> "Player 2"
   }
 
   html.section([attrs.id("alert-message"), attrs.class("alerts")], [
@@ -146,23 +146,23 @@ fn view_alert(message: Option(Alert)) -> html.Node(a) {
   }
 }
 
-fn view_card_pile(state: cf.GameState) -> html.Node(a) {
-  let size = cf.deck_size(state)
+fn view_card_pile(state: g.GameState) -> html.Node(a) {
+  let size = g.deck_size(state)
 
   html.div([attrs.class("deck")], [
     click(
-      [#("event", "draw-card"), #("player", codec.encode_player(cf.Player2))],
+      [#("event", "draw-card"), #("player", codec.encode_player(g.Player2))],
       html.section([attrs.class("draw-pile")], [draw_deck(size)]),
     ),
     click(
-      [#("event", "draw-card"), #("player", codec.encode_player(cf.Player1))],
+      [#("event", "draw-card"), #("player", codec.encode_player(g.Player1))],
       html.section([attrs.class("draw-pile")], [draw_deck(size)]),
     ),
   ])
 }
 
-fn view_score_totals(state: cf.GameState) -> html.Node(a) {
-  let totals = cf.score_totals(state)
+fn view_score_totals(state: g.GameState) -> html.Node(a) {
+  let totals = g.score_totals(state)
 
   html.section([attrs.class("scores")], {
     use score <- list.map(totals)
@@ -185,12 +185,12 @@ fn view_score_totals(state: cf.GameState) -> html.Node(a) {
   })
 }
 
-fn view_score_columns(state: cf.GameState, player: cf.Player) -> html.Node(a) {
-  let columns = cf.score_columns(state)
+fn view_score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
+  let columns = g.score_columns(state)
 
   let scores = case player {
-    cf.Player1 -> list.map(columns, pair.first)
-    cf.Player2 -> list.map(columns, pair.second)
+    g.Player1 -> list.map(columns, pair.first)
+    g.Player2 -> list.map(columns, pair.second)
   }
 
   let player = codec.encode_player(player)
@@ -228,8 +228,8 @@ fn view_score_columns(state: cf.GameState, player: cf.Player) -> html.Node(a) {
   })
 }
 
-fn view_hand(state: cf.GameState, player: cf.Player) -> html.Node(a) {
-  let hand = cf.player_hand(state, of: player)
+fn view_hand(state: g.GameState, player: g.Player) -> html.Node(a) {
+  let hand = g.player_hand(state, of: player)
 
   html.Fragment(
     list.map(hand, fn(card) {
@@ -245,8 +245,8 @@ fn view_hand(state: cf.GameState, player: cf.Player) -> html.Node(a) {
   )
 }
 
-fn view_slots(model: Model, player: cf.Player) -> html.Node(a) {
-  let columns = cf.columns(model.gamestate, player)
+fn view_slots(model: Model, player: g.Player) -> html.Node(a) {
+  let columns = g.columns(model.gamestate, player)
   let class = attrs.class("slot" <> " " <> codec.encode_player(player))
 
   html.section([attrs.class("slots")], {
@@ -262,7 +262,7 @@ fn view_slots(model: Model, player: cf.Player) -> html.Node(a) {
 
 // --- View board components --- //
 
-fn card_front(card: cf.Card) -> html.Node(a) {
+fn card_front(card: g.Card) -> html.Node(a) {
   let utf = suit_utf(card.suit)
   let rank = codec.encode_rank(card.rank)
   let color = suit_color(card.suit)
@@ -316,34 +316,34 @@ fn alert(alert: Alert) -> html.Node(a) {
   html.div([attrs.class("alert " <> color)], [html.span_text([], alert.message)])
 }
 
-fn to_alert(error: cf.Errors) -> Alert {
+fn to_alert(error: g.Errors) -> Alert {
   case error {
-    cf.InvalidAction(_) -> Bad("Invalid Action")
-    cf.NotCurrentPhase -> Warn("Not current phase")
-    cf.NotCurrentPlayer -> Warn("Not current player")
-    cf.NoCardInHand -> Warn("Card not in hand")
-    cf.EmptyDeck -> Info("Deck already empty")
-    cf.MaxHandReached -> Info("Hand at max")
-    cf.NotClaimableSlot -> Info("Slot is not claimable")
-    cf.NotPlayableSlot -> Info("Slot is not playable")
+    g.InvalidAction(_) -> Bad("Invalid Action")
+    g.NotCurrentPhase -> Warn("Not current phase")
+    g.NotCurrentPlayer -> Warn("Not current player")
+    g.NoCardInHand -> Warn("Card not in hand")
+    g.EmptyDeck -> Info("Deck already empty")
+    g.MaxHandReached -> Info("Hand at max")
+    g.NotClaimableSlot -> Info("Slot is not claimable")
+    g.NotPlayableSlot -> Info("Slot is not playable")
   }
 }
 
-fn suit_utf(suit: cf.Suit) -> String {
+fn suit_utf(suit: g.Suit) -> String {
   case suit {
-    cf.Spade -> "♠"
-    cf.Heart -> "♥"
-    cf.Diamond -> "♦"
-    cf.Club -> "♣"
+    g.Spade -> "♠"
+    g.Heart -> "♥"
+    g.Diamond -> "♦"
+    g.Club -> "♣"
   }
 }
 
-fn suit_color(suit: cf.Suit) -> String {
+fn suit_color(suit: g.Suit) -> String {
   case suit {
-    cf.Spade -> "blue"
-    cf.Heart -> "red"
-    cf.Diamond -> "green"
-    cf.Club -> "purple"
+    g.Spade -> "blue"
+    g.Heart -> "red"
+    g.Diamond -> "green"
+    g.Club -> "purple"
   }
 }
 
@@ -359,41 +359,41 @@ type ScoreGroup {
   )
 }
 
-fn end_game_scoring(state: cf.GameState) -> html.Node(a) {
-  let scores = cf.score_columns(state)
-  let total = cf.score_total(state)
+fn end_game_scoring(state: g.GameState) -> html.Node(a) {
+  let scores = g.score_columns(state)
+  let total = g.score_total(state)
 
   let score_group =
     ScoreGroup(#(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0))
 
-  let group = fn(group: ScoreGroup, score: cf.Score) {
+  let group = fn(group: ScoreGroup, score: g.Score) {
     case score.formation {
-      cf.StraightFlush -> {
+      g.StraightFlush -> {
         let #(count, bonus) = group.straight_flush
         let stats = #(count + 1, bonus + score.bonus_formation)
         ScoreGroup(..group, straight_flush: stats)
       }
-      cf.ThreeOfAKind -> {
+      g.ThreeOfAKind -> {
         let #(count, bonus) = group.three_of_a_kind
         let stats = #(count + 1, bonus + score.bonus_formation)
         ScoreGroup(..group, three_of_a_kind: stats)
       }
-      cf.Straight -> {
+      g.Straight -> {
         let #(count, bonus) = group.straight
         let stats = #(count + 1, bonus + score.bonus_formation)
         ScoreGroup(..group, straight: stats)
       }
-      cf.Flush -> {
+      g.Flush -> {
         let #(count, bonus) = group.flush
         let stats = #(count + 1, bonus + score.bonus_formation)
         ScoreGroup(..group, flush: stats)
       }
-      cf.Pair -> {
+      g.Pair -> {
         let #(count, bonus) = group.pair
         let stats = #(count + 1, bonus + score.bonus_formation)
         ScoreGroup(..group, pair: stats)
       }
-      cf.HighCard -> {
+      g.HighCard -> {
         let #(count, bonus) = group.highcard
         let stats = #(count + 1, bonus + score.bonus_formation)
         ScoreGroup(..group, highcard: stats)
@@ -401,9 +401,9 @@ fn end_game_scoring(state: cf.GameState) -> html.Node(a) {
     }
   }
 
-  let sum_score = fn(sum: Int, score: cf.Score) { sum + score.score }
-  let sum_form = fn(sum: Int, score: cf.Score) { sum + score.bonus_formation }
-  let sum_flank = fn(sum: Int, score: cf.Score) { sum + score.bonus_flank }
+  let sum_score = fn(sum: Int, score: g.Score) { sum + score.score }
+  let sum_form = fn(sum: Int, score: g.Score) { sum + score.bonus_formation }
+  let sum_flank = fn(sum: Int, score: g.Score) { sum + score.bonus_flank }
 
   let p1_scores = list.map(scores, pair.first)
   let p1_score_group = list.fold(p1_scores, score_group, group)
@@ -444,7 +444,7 @@ fn end_game_scoring(state: cf.GameState) -> html.Node(a) {
 fn group_table(group: ScoreGroup) -> html.Node(a) {
   let s = fn(x) { int.to_string(x) }
 
-  let suit = fn(suit: cf.Suit, rank: Int) -> html.Node(a) {
+  let suit = fn(suit: g.Suit, rank: Int) -> html.Node(a) {
     let utf = suit_utf(suit)
     let color = suit_color(suit)
     let rank = int.to_string(rank)
@@ -454,26 +454,26 @@ fn group_table(group: ScoreGroup) -> html.Node(a) {
 
   let data = [
     #("Straight Flush", group.straight_flush.0, [
-      suit(cf.Spade, 3),
-      suit(cf.Spade, 2),
-      suit(cf.Spade, 1),
+      suit(g.Spade, 3),
+      suit(g.Spade, 2),
+      suit(g.Spade, 1),
     ]),
     #("Three of Kind", group.three_of_a_kind.0, [
-      suit(cf.Spade, 7),
-      suit(cf.Diamond, 7),
-      suit(cf.Club, 7),
+      suit(g.Spade, 7),
+      suit(g.Diamond, 7),
+      suit(g.Club, 7),
     ]),
     #("Straight", group.straight.0, [
-      suit(cf.Heart, 6),
-      suit(cf.Club, 5),
-      suit(cf.Spade, 4),
+      suit(g.Heart, 6),
+      suit(g.Club, 5),
+      suit(g.Spade, 4),
     ]),
     #("Flush", group.flush.0, [
-      suit(cf.Heart, 8),
-      suit(cf.Heart, 4),
-      suit(cf.Heart, 2),
+      suit(g.Heart, 8),
+      suit(g.Heart, 4),
+      suit(g.Heart, 2),
     ]),
-    #("Pair", group.pair.0, [suit(cf.Club, 4), suit(cf.Diamond, 4)]),
+    #("Pair", group.pair.0, [suit(g.Club, 4), suit(g.Diamond, 4)]),
   ]
 
   html.table([], [
@@ -517,10 +517,10 @@ fn totals_table(total: Int) -> html.Node(a) {
   ])
 }
 
-fn winner(total: #(Option(cf.Player), Int)) -> html.Node(a) {
+fn winner(total: #(Option(g.Player), Int)) -> html.Node(a) {
   let total = case total {
-    #(Some(cf.Player1), total) -> #("Player 1!", int.to_string(total))
-    #(Some(cf.Player2), total) -> #("Player 2!", int.to_string(total))
+    #(Some(g.Player1), total) -> #("Player 1!", int.to_string(total))
+    #(Some(g.Player2), total) -> #("Player 2!", int.to_string(total))
     #(None, total) -> #("DRAW", int.to_string(total))
   }
 

@@ -1,45 +1,47 @@
 import gleam/bit_array
 import gleam/bytes_builder
 import gleam/erlang
+import gleam/erlang/process
 import gleam/http
 import gleam/http/request
 import gleam/http/response
 import gleam/string
 import gleam/uri
-import luster/events
 import luster/store
-import luster/web/pages/game
-import luster/web/pages/home
+import luster/web/socket
+import luster/web/tea_game
+import luster/web/tea_home
+import chip
 import mist
 import nakai
 import nakai/html
 import nakai/html/attrs
-import luster/session
 
 pub fn router(
   request: request.Request(mist.Connection),
-  session: session.Session(game.Model, message),
+  registry: process.Subject(chip.Message(String, socket.Message)),
+  store: process.Subject(store.Message(tea_game.Model)),
 ) -> response.Response(mist.ResponseData) {
   case request.method, request.path_segments(request) {
     http.Get, [] -> {
-      let records = store.all(session.store)
+      let records = store.all(store)
 
-      home.Model(records)
-      |> home.view()
+      tea_home.Model(records)
+      |> tea_home.view()
       |> render(with: fn(body) { layout("", body) })
     }
 
     http.Post, ["battleline"] -> {
-      let model = game.init()
-      let _ = store.create(session.store, model)
+      let model = tea_game.init()
+      let _ = store.create(store, model)
       redirect("/")
     }
 
     http.Get, ["battleline", id] -> {
-      case store.one(session.store, id) {
+      case store.one(store, id) {
         Ok(model) ->
           model
-          |> game.view()
+          |> tea_game.view()
           |> render(with: fn(body) { layout(id, body) })
 
         Error(_) -> redirect("/")
@@ -47,7 +49,7 @@ pub fn router(
     }
 
     http.Get, ["events"] -> {
-      events.start(request, session)
+      socket.start(request, registry, store)
     }
 
     http.Get, ["assets", ..] -> {

@@ -1,7 +1,7 @@
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/int
 import gleam/result.{try}
-import luster/game/cardfield.{
+import luster/game.{
   type Card, type Player, type Slot, type Suit, Club, Diamond, Heart, Player1,
   Player2, Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8, Slot9, Spade,
 }
@@ -50,7 +50,7 @@ pub fn decoder_slot(data: Dynamic) -> Result(Slot, List(DecodeError)) {
 
 pub fn decoder_card(data: Dynamic) -> Result(Card, List(DecodeError)) {
   dynamic.decode2(
-    cardfield.Card,
+    game.Card,
     dynamic.field("rank", of: decode_rank),
     dynamic.field("suit", of: decode_suit),
   )(data)

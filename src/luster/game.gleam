@@ -373,14 +373,14 @@ fn formation_triplet(card_a: Card, card_b: Card, card_c: Card) -> Formation {
 
   let is_pair = ra == rb || rb == rc || rc == ra
   let is_triplet = ra == rb && rb == rc
-  let is_straight = sa == sb && sb == sc
-  let is_flush = { ra + 1 == rb } && { rb + 1 == rc }
+  let is_flush = sa == sb && sb == sc
+  let is_straight = { ra + 1 == rb } && { rb + 1 == rc }
 
-  case is_pair, is_triplet, is_straight, is_flush {
+  case is_pair, is_triplet, is_flush, is_straight {
     _bool, False, True, True -> StraightFlush
     _bool, True, False, False -> ThreeOfAKind
-    _bool, False, True, False -> Straight
-    _bool, False, False, True -> Flush
+    _bool, False, False, True -> Straight
+    _bool, False, True, False -> Flush
     True, False, False, False -> Pair
     _bool, _bool, _bool, _bool -> HighCard
   }
