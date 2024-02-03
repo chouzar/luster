@@ -1,9 +1,9 @@
+import gleam/bit_array
 import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/order
 import gleam/otp/actor
-import gleam/bit_array
 
 type State(x) {
   State(counter: Int, records: List(Record(x)))
@@ -22,7 +22,7 @@ pub opaque type Message(x) {
   Stop
 }
 
-pub type Store(x) =
+type Store(x) =
   process.Subject(Message(x))
 
 pub fn start() -> Result(Store(x), actor.StartError) {

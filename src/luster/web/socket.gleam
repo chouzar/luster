@@ -1,63 +1,93 @@
+import chip
 import gleam/bit_array
 import gleam/erlang/process
-import gleam/function.{tap}
+import gleam/function.{identity, tap}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/int
 import gleam/io
-import gleam/json
 import gleam/list
-import gleam/option.{type Option, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/result.{try}
-import luster/store
-import luster/web/codec
-import luster/web/tea_game
-import chip
+import luster/games/three_line_poker as g
+import luster/systems/session
+import luster/web/tea_game as tea
 import mist.{
   type Connection, type ResponseData, type WebsocketConnection,
   type WebsocketMessage, Binary, Closed, Custom, Shutdown, Text,
 }
 import nakai
 
-pub opaque type Message {
-  UpdateView
+pub type PubSub =
+  process.Subject(chip.Message(String, Message))
+
+pub type Message {
+  UpdateGameState
   Close
+}
+
+pub type Action {
+  Play(g.Message)
+  Select(tea.Message)
 }
 
 pub opaque type State {
   State(
-    session_id: String,
     self: process.Subject(Message),
-    registry: process.Subject(chip.Message(String, Message)),
-    store: process.Subject(store.Message(tea_game.Model)),
+    session_id: String,
+    session: process.Subject(session.Message),
+    pubsub: PubSub,
+    model: tea.Model,
   )
 }
 
 pub fn start(
   request: Request(Connection),
-  registry: process.Subject(chip.Message(String, Message)),
-  store: process.Subject(store.Message(tea_game.Model)),
+  session_id: String,
+  session: process.Subject(session.Message),
+  pubsub: PubSub,
 ) -> Response(ResponseData) {
   mist.websocket(
     request: request,
-    on_init: build_init(_, registry, store),
+    on_init: build_init(_, session_id, session, pubsub),
     on_close: on_close,
-    handler: handler,
+    handler: handle_message,
   )
+}
+
+pub fn broadcast(registry, channel, message) -> Nil {
+  chip.lookup(registry, channel)
+  |> list.map(fn(subject) { process.send(subject, message) })
+
+  Nil
 }
 
 fn build_init(
   _conn: WebsocketConnection,
-  registry: process.Subject(chip.Message(String, Message)),
-  store: process.Subject(store.Message(tea_game.Model)),
+  session_id: String,
+  session: process.Subject(session.Message),
+  pubsub: PubSub,
 ) -> #(State, Option(process.Selector(Message))) {
-  let subject = process.new_subject()
+  let self = process.new_subject()
+
+  let _ = chip.register_as(pubsub, session_id, fn() { Ok(self) })
+
+  let assert Ok(gamestate) = session.get(session)
+
+  let model =
+    tea.Model(
+      alert: None,
+      selected_card: None,
+      toggle_scoring: False,
+      gamestate: gamestate,
+    )
 
   #(
-    State("", subject, registry, store),
+    State(self, session_id, session, pubsub, model),
     Some(
       process.new_selector()
-      |> process.selecting(subject, function.identity),
+      |> process.selecting(self, identity),
     ),
   )
 }
@@ -67,58 +97,86 @@ fn on_close(state: State) -> Nil {
   Nil
 }
 
-fn handler(
+fn handle_message(
   state: State,
   conn: WebsocketConnection,
   message: WebsocketMessage(Message),
 ) -> actor.Next(a, State) {
   case message {
-    Text("session:" <> session) -> {
-      let _ = chip.register_as(state.registry, session, fn() { Ok(state.self) })
-      let state = State(..state, session_id: session)
-      actor.continue(state)
-    }
-
     Binary(bits) -> {
-      let _ = {
-        use message <- try(parse_message(bits))
-        use model <- try(store.one(state.store, state.session_id))
+      let result = {
+        use action <- try(parse_message(bits))
+        use gamestate <- try(session.get(state.session))
 
-        model
-        |> tea_game.update(message)
-        |> tap(store.update(state.store, state.session_id, _))
+        case action {
+          Play(message) -> {
+            case g.next(gamestate, message) {
+              Ok(gamestate) -> {
+                let Nil = session.set(state.session, gamestate)
+                let Nil =
+                  broadcast(state.pubsub, state.session_id, UpdateGameState)
+                Ok(state)
+              }
 
-        chip.lookup(state.registry, state.session_id)
-        |> list.map(fn(socket) { process.send(socket, UpdateView) })
+              Error(error) -> {
+                let model = tea.update(state.model, tea.Alert(error))
+                let state = State(..state, model: model)
 
-        Ok(Nil)
+                model
+                |> tea.view()
+                |> nakai.to_inline_string()
+                |> tap(mist.send_text_frame(conn, _))
+
+                Ok(state)
+              }
+            }
+          }
+
+          Select(message) -> {
+            io.debug(message)
+            let model = tea.update(state.model, message)
+            let state = State(..state, model: model)
+
+            model
+            |> tea.view()
+            |> nakai.to_inline_string()
+            |> tap(mist.send_text_frame(conn, _))
+
+            Ok(state)
+          }
+        }
       }
 
-      actor.continue(state)
+      case result {
+        Ok(state) -> actor.continue(state)
+        Error(Nil) -> actor.continue(state)
+      }
     }
 
-    Custom(UpdateView) -> {
-      let _ = {
-        use model <- try(store.one(state.store, state.session_id))
+    Custom(UpdateGameState) -> {
+      case session.get(state.session) {
+        Ok(gamestate) -> {
+          tea.update(state.model, tea.Next(gamestate))
+          |> tea.view()
+          |> nakai.to_inline_string()
+          |> tap(mist.send_text_frame(conn, _))
 
-        model
-        |> tea_game.view()
-        |> nakai.to_inline_string()
-        |> tap(mist.send_text_frame(conn, _))
+          actor.continue(state)
+        }
 
-        Ok(Nil)
+        Error(Nil) -> {
+          actor.continue(state)
+        }
       }
+    }
 
-      actor.continue(state)
+    Custom(Close) -> {
+      actor.Stop(process.Normal)
     }
 
     Text(message) -> {
       io.println("out of bound message: " <> message)
       actor.continue(state)
-    }
-
-    Custom(Close) -> {
-      actor.Stop(process.Normal)
     }
 
     Closed | Shutdown -> {
@@ -127,54 +185,112 @@ fn handler(
   }
 }
 
-fn parse_message(bits: BitArray) -> Result(tea_game.Message, Nil) {
+fn parse_message(bits: BitArray) -> Result(Action, Nil) {
   case bits {
-    <<"draw-card":utf8, "\n\n":utf8, json:bytes>> -> {
-      use player <- try(decode(from: json, using: codec.decoder_player))
-      Ok(tea_game.DrawCard(player))
+    <<"draw-card":utf8, rest:bytes>> -> {
+      use #(player) <- try(decode_draw_card(rest))
+      Ok(Play(g.DrawCard(player)))
     }
 
-    <<"select-card":utf8, "\n\n":utf8, json:bytes>> -> {
-      use card <- try(decode(from: json, using: codec.decoder_card))
-      Ok(tea_game.SelectCard(card))
+    <<"play-card":utf8, rest:bytes>> -> {
+      use #(player, slot, card) <- try(decode_play_card(rest))
+      Ok(Play(g.PlayCard(player, slot, card)))
     }
 
-    <<"play-card":utf8, "\n\n":utf8, json:bytes>> -> {
-      use slot <- try(decode(from: json, using: codec.decoder_slot))
-      Ok(tea_game.PlayCard(slot))
+    <<"select-card":utf8, rest:bytes>> -> {
+      use #(card) <- try(decode_select_card(rest))
+      Ok(Select(tea.SelectCard(card)))
     }
 
-    <<"popup-toggle":utf8, "\n\n":utf8, _json:bytes>> -> {
-      Ok(tea_game.ToggleScoring)
+    <<"popup–toggle":utf8, _rest:bytes>> -> {
+      Ok(Select(tea.ToggleScoring))
     }
 
-    bits -> {
-      use message <- try(bit_array.to_string(bits))
-      io.println("out of bound action: " <> message)
-      Error(Nil)
-    }
-  }
-}
-
-fn decode(from json, using decoder) {
-  case json.decode_bits(json, decoder) {
-    Ok(value) -> Ok(value)
-
-    Error(_) -> {
-      use message <- try(to_string(json))
-      io.println("malformed JSON data: " <> message)
-      Error(Nil)
-    }
-  }
-}
-
-fn to_string(bits: BitArray) -> Result(String, Nil) {
-  case bit_array.to_string(bits) {
-    Ok(message) -> Ok(message)
-    Error(Nil) -> {
-      io.println("malformed Blob data:")
+    _other -> {
+      io.println("out of bound message:")
       io.debug(bits)
       Error(Nil)
     }
   }
+}
+
+fn decode_draw_card(bits: BitArray) -> Result(#(g.Player), Nil) {
+  case bits {
+    <<player:bytes-size(2)>> -> {
+      use player <- try(decode_player(player))
+      Ok(#(player))
+    }
+
+    _other -> Error(Nil)
+  }
+}
+
+fn decode_play_card(bits: BitArray) -> Result(#(g.Player, g.Slot, g.Card), Nil) {
+  case bits {
+    <<
+      player:bytes-size(2),
+      slot:bytes-size(1),
+      suit:bytes-size(2),
+      rank:bytes-size(1),
+    >> -> {
+      use player <- try(decode_player(player))
+      use slot <- try(decode_slot(slot))
+      use suit <- try(decode_suit(suit))
+      use rank <- try(decode_rank(rank))
+      Ok(#(player, slot, g.Card(rank, suit)))
+    }
+
+    _other -> Error(Nil)
+  }
+}
+
+fn decode_select_card(bits: BitArray) -> Result(#(g.Card), Nil) {
+  case bits {
+    <<suit:bytes-size(3), rank:bytes-size(1)>> -> {
+      use suit <- try(decode_suit(suit))
+      use rank <- try(decode_rank(rank))
+      Ok(#(g.Card(rank, suit)))
+    }
+
+    _other -> Error(Nil)
+  }
+}
+
+fn decode_player(bits: BitArray) -> Result(g.Player, Nil) {
+  case bits {
+    <<"p1":utf8>> -> Ok(g.Player1)
+    <<"p2":utf8>> -> Ok(g.Player2)
+    _ -> Error(Nil)
+  }
+}
+
+fn decode_slot(bits: BitArray) -> Result(g.Slot, Nil) {
+  case bits {
+    <<"1":utf8>> -> Ok(g.Slot1)
+    <<"2":utf8>> -> Ok(g.Slot2)
+    <<"3":utf8>> -> Ok(g.Slot3)
+    <<"4":utf8>> -> Ok(g.Slot4)
+    <<"5":utf8>> -> Ok(g.Slot5)
+    <<"6":utf8>> -> Ok(g.Slot6)
+    <<"7":utf8>> -> Ok(g.Slot7)
+    <<"8":utf8>> -> Ok(g.Slot8)
+    <<"9":utf8>> -> Ok(g.Slot9)
+    _ -> Error(Nil)
+  }
+}
+
+fn decode_suit(bits: BitArray) -> Result(g.Suit, Nil) {
+  case bits {
+    <<"♠":utf8>> -> Ok(g.Spade)
+    <<"♥":utf8>> -> Ok(g.Heart)
+    <<"♦":utf8>> -> Ok(g.Diamond)
+    <<"♣":utf8>> -> Ok(g.Club)
+    _ -> Error(Nil)
+  }
+}
+
+fn decode_rank(bits: BitArray) -> Result(Int, Nil) {
+  use string <- try(bit_array.to_string(bits))
+  use int <- try(int.parse(string))
+  Ok(int)
 }

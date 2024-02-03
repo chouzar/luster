@@ -1,3 +1,4 @@
+import chip
 import gleam/bit_array
 import gleam/bytes_builder
 import gleam/erlang
@@ -7,11 +8,13 @@ import gleam/http/request
 import gleam/http/response
 import gleam/string
 import gleam/uri
-import luster/store
+import luster/systems/comp
+import luster/systems/session
+import luster/systems/store
+import luster/games/three_line_poker as tlp
 import luster/web/socket
 import luster/web/tea_game
 import luster/web/tea_home
-import chip
 import mist
 import nakai
 import nakai/html
@@ -19,8 +22,9 @@ import nakai/html/attrs
 
 pub fn router(
   request: request.Request(mist.Connection),
-  registry: process.Subject(chip.Message(String, socket.Message)),
-  store: process.Subject(store.Message(tea_game.Model)),
+  store: process.Subject(store.Message(tlp.GameState)),
+  session_registry: process.Subject(chip.Message(String, session.Message)),
+  socket_registry: process.Subject(chip.Message(String, socket.Message)),
 ) -> response.Response(mist.ResponseData) {
   case request.method, request.path_segments(request) {
     http.Get, [] -> {
@@ -32,15 +36,17 @@ pub fn router(
     }
 
     http.Post, ["battleline"] -> {
-      let model = tea_game.init()
-      let _ = store.create(store, model)
+      let assert Ok(_session) = session.start(store, session_registry)
+      //let assert Ok(_comp_1) = comp.start(tlp.Player1, session, socket_registry)
+      //let assert Ok(_comp_2) = comp.start(tlp.Player2, session, socket_registry)
+
       redirect("/")
     }
 
     http.Get, ["battleline", id] -> {
       case store.one(store, id) {
-        Ok(model) ->
-          model
+        Ok(gamestate) ->
+          tea_game.init(gamestate)
           |> tea_game.view()
           |> render(with: fn(body) { layout(id, body) })
 
@@ -48,8 +54,9 @@ pub fn router(
       }
     }
 
-    http.Get, ["events"] -> {
-      socket.start(request, registry, store)
+    http.Get, ["events", session_id] -> {
+      let assert [session] = chip.lookup(session_registry, session_id)
+      socket.start(request, session_id, session, socket_registry)
     }
 
     http.Get, ["assets", ..] -> {

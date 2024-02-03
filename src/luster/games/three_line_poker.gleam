@@ -1,11 +1,11 @@
+import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
-import gleam/dict.{type Dict}
 import gleam/option.{type Option, None, Some}
 import gleam/order.{type Order}
 import gleam/result.{try}
 
-const max_hand_size = 8
+pub const max_hand_size = 8
 
 const plays_per_turn = 4
 
@@ -26,6 +26,11 @@ const highcard = 0
 const ranks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
 const suits = [Spade, Heart, Diamond, Club]
+
+pub type Message {
+  DrawCard(player: Player)
+  PlayCard(player: Player, slot: Slot, card: Card)
+}
 
 pub opaque type GameState {
   GameState(
@@ -115,7 +120,7 @@ pub type Score {
 }
 
 pub type Errors {
-  InvalidAction(Action)
+  InvalidAction(Message)
   NotCurrentPhase
   NotCurrentPlayer
   EmptyDeck
@@ -138,28 +143,11 @@ pub fn new() -> GameState {
   )
 }
 
-pub type Action {
-  DrawCard(player: Player)
-  PlayCard(player: Player, slot: Slot, card: Card)
-}
-
 /// Modifies the game state by applying an action.
-pub fn next(state: GameState, action: Action) -> Result(GameState, Errors) {
-  let check_current_player = fn(state: GameState, player) {
-    let current = first(state.sequence)
-
-    case state.turn, player {
-      0, _player -> Ok(state)
-      _, player if player == current -> Ok(state)
-      _, _ -> Error(NotCurrentPlayer)
-    }
-  }
-
-  // TODO: Draw should not stop from playng the other player
+pub fn next(state: GameState, action: Message) -> Result(GameState, Errors) {
   case state.phase, action {
     Draw, DrawCard(player) -> {
       Ok(state)
-      |> result.then(check_current_player(_, player))
       |> result.then(fn(state) {
         draw_card(state.board, player)
         |> result.map(fn(board) { GameState(..state, board: board) })
@@ -182,7 +170,12 @@ pub fn next(state: GameState, action: Action) -> Result(GameState, Errors) {
 
     Play, PlayCard(player, slot, card) -> {
       Ok(state)
-      |> result.then(check_current_player(_, player))
+      |> result.then(fn(state) {
+        case first(state.sequence) {
+          current if player == current -> Ok(state)
+          _current -> Error(NotCurrentPlayer)
+        }
+      })
       |> result.then(fn(state) {
         play_card(state.board, player, slot, card)
         |> result.map(fn(board) { GameState(..state, board: board) })

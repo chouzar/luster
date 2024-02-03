@@ -1,76 +1,57 @@
 import gleam/int
+import gleam/bit_array
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/pair
-import gleam/result.{try}
-import luster/game as g
-import luster/web/codec
+import luster/games/three_line_poker as g
 import nakai/html
 import nakai/html/attrs
+import gleam/io
 
 // --- Elmish Game --- //
 
+pub type Message {
+  SelectCard(g.Card)
+  ToggleScoring
+  Alert(g.Errors)
+  Next(g.GameState)
+}
+
 pub type Model {
   Model(
-    name: String,
-    alert: Option(Alert),
+    alert: Option(g.Errors),
     selected_card: Option(g.Card),
     toggle_scoring: Bool,
     gamestate: g.GameState,
   )
 }
 
-pub type Message {
-  DrawCard(player: g.Player)
-  SelectCard(card: g.Card)
-  PlayCard(slot: g.Slot)
-  ToggleScoring
-}
-
-pub type Alert {
-  Info(message: String)
-  Warn(message: String)
-  Bad(message: String)
-}
-
-pub fn init() -> Model {
+pub fn init(gamestate) -> Model {
   Model(
-    name: generate_name(),
     alert: None,
     selected_card: None,
-    toggle_scoring: True,
-    gamestate: g.new(),
+    toggle_scoring: False,
+    gamestate: gamestate,
   )
 }
 
 pub fn update(model: Model, message: Message) -> Model {
-  let result = case message {
-    DrawCard(player) -> {
-      let message = g.DrawCard(player)
-      use gamestate <- try(g.next(model.gamestate, message))
-      Ok(Model(..model, gamestate: gamestate))
-    }
-
+  case message {
     SelectCard(card) -> {
-      Ok(Model(..model, selected_card: Some(card)))
-    }
-
-    PlayCard(slot) -> {
-      let player = g.current_player(model.gamestate)
-      use card <- try(option.to_result(model.selected_card, g.NoCardInHand))
-      let message = g.PlayCard(player, slot, card)
-      use gamestate <- try(g.next(model.gamestate, message))
-      Ok(Model(..model, gamestate: gamestate))
+      Model(..model, alert: None, selected_card: Some(card))
     }
 
     ToggleScoring -> {
-      Ok(Model(..model, toggle_scoring: !model.toggle_scoring))
+      Model(..model, alert: None, toggle_scoring: !model.toggle_scoring)
     }
-  }
 
-  case result {
-    Ok(model) -> model
-    Error(error) -> Model(..model, alert: Some(to_alert(error)))
+    Alert(error) -> {
+      Model(..model, alert: Some(error))
+    }
+
+    Next(gamestate) -> {
+      Model(..model, gamestate: gamestate)
+    }
   }
 }
 
@@ -87,9 +68,9 @@ pub fn view(model: Model) -> html.Node(a) {
           view_hand(model.gamestate, g.Player2),
         ]),
         view_score_columns(model.gamestate, g.Player2),
-        view_slots(model, g.Player2),
+        view_slots(model.gamestate, g.Player2, model.selected_card),
         view_score_totals(model.gamestate),
-        view_slots(model, g.Player1),
+        view_slots(model.gamestate, g.Player1, model.selected_card),
         view_score_columns(model.gamestate, g.Player1),
         html.section([attrs.class("hand")], [
           view_hand(model.gamestate, g.Player1),
@@ -132,11 +113,26 @@ fn view_game_info(state: g.GameState) -> html.Node(a) {
   ])
 }
 
-fn view_alert(message: Option(Alert)) -> html.Node(a) {
-  case message {
-    Some(a) -> {
+fn view_alert(alert: Option(g.Errors)) -> html.Node(a) {
+  case alert {
+    Some(error) -> {
       html.section([attrs.id("alert-message"), attrs.class("alerts")], [
-        alert(a),
+        {
+          let #(color, message) = case error {
+            g.InvalidAction(_) -> #("error", "Invalid Action")
+            g.NotCurrentPhase -> #("warning", "Not current phase")
+            g.NotCurrentPlayer -> #("warning", "Not current player")
+            g.NoCardInHand -> #("warning", "Card not in hand")
+            g.EmptyDeck -> #("info", "Deck already empty")
+            g.MaxHandReached -> #("info", "Hand at max")
+            g.NotClaimableSlot -> #("info", "Slot is not claimable")
+            g.NotPlayableSlot -> #("info", "Slot is not playable")
+          }
+
+          html.div([attrs.class("alert " <> color)], [
+            html.span_text([], message),
+          ])
+        },
       ])
     }
 
@@ -151,11 +147,11 @@ fn view_card_pile(state: g.GameState) -> html.Node(a) {
 
   html.div([attrs.class("deck")], [
     click(
-      [#("event", "draw-card"), #("player", codec.encode_player(g.Player2))],
+      [#("event", encode_draw_card(g.Player2))],
       html.section([attrs.class("draw-pile")], [draw_deck(size)]),
     ),
     click(
-      [#("event", "draw-card"), #("player", codec.encode_player(g.Player1))],
+      [#("event", encode_draw_card(g.Player1))],
       html.section([attrs.class("draw-pile")], [draw_deck(size)]),
     ),
   ])
@@ -168,10 +164,9 @@ fn view_score_totals(state: g.GameState) -> html.Node(a) {
     use score <- list.map(totals)
     case score {
       #(Some(player), total) -> {
-        let player = codec.encode_player(player)
         let score = int.to_string(total)
 
-        html.div([attrs.class("score" <> " " <> player)], [
+        html.div([attrs.class("score" <> " " <> player_class(player))], [
           html.span_text([], score),
         ])
       }
@@ -192,8 +187,6 @@ fn view_score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
     g.Player1 -> list.map(columns, pair.first)
     g.Player2 -> list.map(columns, pair.second)
   }
-
-  let player = codec.encode_player(player)
 
   html.section([attrs.class("scores")], {
     use score <- list.map(scores)
@@ -222,7 +215,7 @@ fn view_score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
     }
 
     html.div(
-      [attrs.class("score" <> " " <> player)],
+      [attrs.class("score" <> " " <> player_class(player))],
       list.concat([card, formation, flank]),
     )
   })
@@ -233,30 +226,33 @@ fn view_hand(state: g.GameState, player: g.Player) -> html.Node(a) {
 
   html.Fragment(
     list.map(hand, fn(card) {
-      click(
-        [
-          #("event", "select-card"),
-          #("suit", codec.encode_suit(card.suit)),
-          #("rank", codec.encode_rank(card.rank)),
-        ],
-        card_front(card),
-      )
+      click([#("event", encode_select_card(player, card))], card_front(card))
     }),
   )
 }
 
-fn view_slots(model: Model, player: g.Player) -> html.Node(a) {
-  let columns = g.columns(model.gamestate, player)
-  let class = attrs.class("slot" <> " " <> codec.encode_player(player))
+fn view_slots(
+  state: g.GameState,
+  player: g.Player,
+  selected_card: Option(g.Card),
+) -> html.Node(a) {
+  io.debug(selected_card)
+  let columns = g.columns(state, player)
+  let class = attrs.class("slot" <> " " <> player_class(player))
 
   html.section([attrs.class("slots")], {
     use slot_column <- list.map(columns)
     let #(slot, column) = slot_column
 
-    click(
-      [#("event", "play-card"), #("slot", codec.encode_slot(slot))],
-      html.div([class], list.map(column, fn(card) { card_front(card) })),
-    )
+    case selected_card {
+      Some(card) ->
+        click(
+          [#("event", encode_play_card(player, slot, card))],
+          html.div([class], list.map(column, fn(card) { card_front(card) })),
+        )
+
+      None -> html.div([class], list.map(column, fn(card) { card_front(card) }))
+    }
   })
 }
 
@@ -264,7 +260,7 @@ fn view_slots(model: Model, player: g.Player) -> html.Node(a) {
 
 fn card_front(card: g.Card) -> html.Node(a) {
   let utf = suit_utf(card.suit)
-  let rank = codec.encode_rank(card.rank)
+  let rank = rank_utf(card.rank)
   let color = suit_color(card.suit)
 
   html.div([attrs.class("card front " <> color)], [
@@ -306,29 +302,6 @@ fn card_back() -> html.Node(a) {
   html.div([attrs.class("card back sparkle")], [])
 }
 
-fn alert(alert: Alert) -> html.Node(a) {
-  let color = case alert {
-    Info(_) -> "info"
-    Warn(_) -> "warning"
-    Bad(_) -> "error"
-  }
-
-  html.div([attrs.class("alert " <> color)], [html.span_text([], alert.message)])
-}
-
-fn to_alert(error: g.Errors) -> Alert {
-  case error {
-    g.InvalidAction(_) -> Bad("Invalid Action")
-    g.NotCurrentPhase -> Warn("Not current phase")
-    g.NotCurrentPlayer -> Warn("Not current player")
-    g.NoCardInHand -> Warn("Card not in hand")
-    g.EmptyDeck -> Info("Deck already empty")
-    g.MaxHandReached -> Info("Hand at max")
-    g.NotClaimableSlot -> Info("Slot is not claimable")
-    g.NotPlayableSlot -> Info("Slot is not playable")
-  }
-}
-
 fn suit_utf(suit: g.Suit) -> String {
   case suit {
     g.Spade -> "♠"
@@ -338,12 +311,23 @@ fn suit_utf(suit: g.Suit) -> String {
   }
 }
 
+fn rank_utf(rank: Int) -> String {
+  int.to_string(rank)
+}
+
 fn suit_color(suit: g.Suit) -> String {
   case suit {
     g.Spade -> "blue"
     g.Heart -> "red"
     g.Diamond -> "green"
     g.Club -> "purple"
+  }
+}
+
+fn player_class(player: g.Player) -> String {
+  case player {
+    g.Player1 -> "player-1"
+    g.Player2 -> "player-2"
   }
 }
 
@@ -534,7 +518,7 @@ fn popup(display: Bool, markup: html.Node(a)) -> html.Node(a) {
   case display {
     True ->
       click(
-        [#("event", "popup-toggle")],
+        [#("event", encode_popup_toggle())],
         html.div([attrs.class("popup")], [markup]),
       )
     False -> html.Nothing
@@ -543,41 +527,84 @@ fn popup(display: Bool, markup: html.Node(a)) -> html.Node(a) {
 
 // --- View HTML Helpers --- //
 
-fn click(params: List(#(String, String)), markup: html.Node(a)) -> html.Node(a) {
+fn click(
+  params: List(#(String, BitArray)),
+  markup: html.Node(a),
+) -> html.Node(a) {
   let dataset = dataset(params)
   html.div(dataset, [markup])
 }
 
-fn dataset(params: List(#(String, String))) -> List(attrs.Attr(a)) {
-  list.map(params, data_attr)
+fn dataset(params: List(#(String, BitArray))) -> List(attrs.Attr(a)) {
+  let to_string = fn(bits) {
+    let assert Ok(string) = bit_array.to_string(bits)
+    string
+  }
+
+  params
+  |> list.map(fn(param) { #(param.0, to_string(param.1)) })
+  |> list.map(data_attr)
 }
 
 fn data_attr(param: #(String, String)) -> attrs.Attr(a) {
   attrs.Attr(name: "data-" <> param.0, value: param.1)
 }
 
-// --- Helpers --- //
+fn encode_draw_card(player: g.Player) -> BitArray {
+  let player = encode_player(player)
+  <<"draw-card":utf8, player:bits>>
+}
 
-const adjectives = [
-  "salty", "brief", "noble", "glorious", "respectful", "tainted", "measurable",
-  "constant", "fake", "lighting", "cool", "sparkling", "painful", "superperfect",
-]
+fn encode_play_card(player: g.Player, slot: g.Slot, card: g.Card) -> BitArray {
+  let player = encode_player(player)
+  let slot = encode_slot(slot)
+  let rank = encode_rank(card.rank)
+  let suit = encode_suit(card.suit)
+  <<"play-card":utf8, player:bits, slot:bits, suit:bits, rank:bits>>
+}
 
-const subjects = [
-  "poker", "party", "battle", "danceoff", "bakeoff", "marathon", "club", "game",
-  "match", "rounds",
-]
+fn encode_select_card(player: g.Player, card: g.Card) -> BitArray {
+  let player = encode_player(player)
+  let suit = encode_suit(card.suit)
+  let rank = encode_rank(card.rank)
+  //<<"select-card":utf8, player:bits, suit:bits, rank:bits>>
+  <<"select-card":utf8, suit:bits, rank:bits>>
+}
 
-fn generate_name() -> String {
-  let assert Ok(adjective) =
-    adjectives
-    |> list.shuffle()
-    |> list.first()
+fn encode_popup_toggle() -> BitArray {
+  <<"popup-toggle":utf8>>
+}
 
-  let assert Ok(subject) =
-    subjects
-    |> list.shuffle()
-    |> list.first()
+fn encode_player(player: g.Player) -> BitArray {
+  case player {
+    g.Player1 -> <<"p1":utf8>>
+    g.Player2 -> <<"p2":utf8>>
+  }
+}
 
-  adjective <> " " <> subject
+fn encode_slot(slot: g.Slot) -> BitArray {
+  case slot {
+    g.Slot1 -> <<"1":utf8>>
+    g.Slot2 -> <<"2":utf8>>
+    g.Slot3 -> <<"3":utf8>>
+    g.Slot4 -> <<"4":utf8>>
+    g.Slot5 -> <<"5":utf8>>
+    g.Slot6 -> <<"6":utf8>>
+    g.Slot7 -> <<"7":utf8>>
+    g.Slot8 -> <<"8":utf8>>
+    g.Slot9 -> <<"9":utf8>>
+  }
+}
+
+fn encode_rank(rank: Int) -> BitArray {
+  <<int.to_string(rank):utf8>>
+}
+
+fn encode_suit(suit: g.Suit) -> BitArray {
+  case suit {
+    g.Spade -> <<"♠":utf8>>
+    g.Heart -> <<"♥":utf8>>
+    g.Diamond -> <<"♦":utf8>>
+    g.Club -> <<"♣":utf8>>
+  }
 }

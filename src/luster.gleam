@@ -1,14 +1,12 @@
+import chip
 import envoy
 import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response
-import luster/store
+import luster/systems/store
 import luster/web
-import luster/web/tea_game
 import mist
-import chip
 
-// TODO: Create a web, games and luster/runtime contexts
 // TODO: Add a proper supervision tree
 //assert Ok(subject) =
 //  supervisor.start(fn(children) {
@@ -16,14 +14,28 @@ import chip
 //    |> supervisor.add(supervisor.worker(session.start))
 //  })
 
+// TODO: Rename chip to be:
+// register -> For adding an already created subject
+// spawn -> For adding the subject in callback 
+
+// TODO: Eventually Chip needs to have a way of registering 
+// custom types and addressing the register, de-register through callbacks.
+// OR accept Selectors
+
+// TODO: Chip could handle id generation through continuations
+// OR use ETS underneath
+
+// TODO: Create a compartment in Chip for unique subjects
+
 pub fn main() -> Nil {
   let assert Ok(store) = store.start()
-  let assert Ok(registry) = chip.start()
+  let assert Ok(session_registry) = chip.start()
+  let assert Ok(socket_registry) = chip.start()
 
   let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
     mist.ResponseData,
   ) {
-    web.router(request, registry, store)
+    web.router(request, store, session_registry, socket_registry)
   }
 
   let assert Ok(_server) =
@@ -34,7 +46,6 @@ pub fn main() -> Nil {
       keyfile: env("LUSTER_KEY"),
     )
 
-  store.create(store, tea_game.init())
   process.sleep_forever()
 }
 
@@ -44,3 +55,29 @@ fn env(key: String) -> String {
     Error(Nil) -> panic as "unable to find ENV"
   }
 }
+// --- Helpers --- //
+
+//const adjectives = [
+//  "salty", "brief", "noble", "glorious", "respectful", "tainted", "measurable",
+//  "constant", "fake", "lighting", "cool", "sparkling", "painful", "superperfect",
+//]
+//
+//const subjects = [
+//  "poker", "party", "battle", "danceoff", "bakeoff", "marathon", "club", "game",
+//  "match", "rounds",
+//]
+//
+//fn generate_name() -> String {
+//  let assert Ok(adjective) =
+//    adjectives
+//    |> list.shuffle()
+//    |> list.first()
+//
+//  let assert Ok(subject) =
+//    subjects
+//    |> list.shuffle()
+//    |> list.first()
+//
+//  adjective <> " " <> subject
+//}
+//
