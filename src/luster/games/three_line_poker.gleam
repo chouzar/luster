@@ -7,7 +7,7 @@ import gleam/result.{try}
 
 pub const max_hand_size = 8
 
-const plays_per_turn = 4
+pub const plays_per_turn = 4
 
 const straight_flush = 19
 

@@ -219,13 +219,19 @@ button {
   justify-content: space-between;
 }
 
-.board>.field>.scores>.score.player-1 {
+.board>.field>.scores.totals>.score.player-1 {
   outline: 3px solid var(--dark-blue);
+}
+
+.board>.field>.scores.totals>.score.player-2 {
+  outline: 3px solid var(--dark-red);
+}
+
+.board>.field>.scores>.score.player-1 {
   color: var(--font-blue);
 }
 
 .board>.field>.scores>.score.player-2 {
-  outline: 3px solid var(--dark-red);
   color: var(--font-red);
 }
 

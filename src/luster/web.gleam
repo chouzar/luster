@@ -36,9 +36,9 @@ pub fn router(
     }
 
     http.Post, ["battleline"] -> {
-      let assert Ok(_session) = session.start(store, session_registry)
-      //let assert Ok(_comp_1) = comp.start(tlp.Player1, session, socket_registry)
-      //let assert Ok(_comp_2) = comp.start(tlp.Player2, session, socket_registry)
+      let assert Ok(session) = session.start(store, session_registry)
+      let assert Ok(_comp_1) = comp.start(tlp.Player1, session, socket_registry)
+      let assert Ok(_comp_2) = comp.start(tlp.Player2, session, socket_registry)
 
       redirect("/")
     }
@@ -46,8 +46,8 @@ pub fn router(
     http.Get, ["battleline", id] -> {
       case store.one(store, id) {
         Ok(gamestate) ->
-          tea_game.init(gamestate)
-          |> tea_game.view()
+          tea_game.init()
+          |> tea_game.view(gamestate)
           |> render(with: fn(body) { layout(id, body) })
 
         Error(_) -> redirect("/")

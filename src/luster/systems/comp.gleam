@@ -45,7 +45,7 @@ fn handle_init(
 
   let session_id = session.id(session)
 
-  process.send_after(self, 5000, AssessMove)
+  process.send(self, AssessMove)
 
   actor.Ready(
     State(self, session_id, player, session, pubsub),
@@ -72,8 +72,7 @@ fn handle_message(message: Message, state: State) -> actor.Next(Message, State) 
         Ok(Nil)
       }
 
-      let _timer =
-        process.send_after(state.self, between(1000, 2500), AssessMove)
+      let _timer = process.send_after(state.self, between(50, 50), AssessMove)
 
       actor.continue(state)
     }

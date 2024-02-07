@@ -3,10 +3,10 @@ import gleam/bit_array
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/pair
+import gleam/string
 import luster/games/three_line_poker as g
 import nakai/html
 import nakai/html/attrs
-import gleam/io
 
 // --- Elmish Game --- //
 
@@ -14,7 +14,6 @@ pub type Message {
   SelectCard(g.Card)
   ToggleScoring
   Alert(g.Errors)
-  Next(g.GameState)
 }
 
 pub type Model {
@@ -22,17 +21,11 @@ pub type Model {
     alert: Option(g.Errors),
     selected_card: Option(g.Card),
     toggle_scoring: Bool,
-    gamestate: g.GameState,
   )
 }
 
-pub fn init(gamestate) -> Model {
-  Model(
-    alert: None,
-    selected_card: None,
-    toggle_scoring: False,
-    gamestate: gamestate,
-  )
+pub fn init() -> Model {
+  Model(alert: None, selected_card: None, toggle_scoring: True)
 }
 
 pub fn update(model: Model, message: Message) -> Model {
@@ -48,38 +41,30 @@ pub fn update(model: Model, message: Message) -> Model {
     Alert(error) -> {
       Model(..model, alert: Some(error))
     }
-
-    Next(gamestate) -> {
-      Model(..model, gamestate: gamestate)
-    }
   }
 }
 
-pub fn view(model: Model) -> html.Node(a) {
-  let phase = g.current_phase(model.gamestate)
+pub fn view(model: Model, gamestate: g.GameState) -> html.Node(a) {
+  let phase = g.current_phase(gamestate)
 
   html.Fragment([
-    view_game_info(model.gamestate),
+    view_game_info(gamestate),
     view_alert(model.alert),
     html.div([attrs.class("board")], [
       html.div([attrs.class("deck")], []),
       html.div([attrs.class("field")], [
-        html.section([attrs.class("hand")], [
-          view_hand(model.gamestate, g.Player2),
-        ]),
-        view_score_columns(model.gamestate, g.Player2),
-        view_slots(model.gamestate, g.Player2, model.selected_card),
-        view_score_totals(model.gamestate),
-        view_slots(model.gamestate, g.Player1, model.selected_card),
-        view_score_columns(model.gamestate, g.Player1),
-        html.section([attrs.class("hand")], [
-          view_hand(model.gamestate, g.Player1),
-        ]),
+        html.section([attrs.class("hand")], [view_hand(gamestate, g.Player2)]),
+        view_score_columns(gamestate, g.Player2),
+        view_slots(gamestate, g.Player2, model.selected_card),
+        view_score_totals(gamestate),
+        view_slots(gamestate, g.Player1, model.selected_card),
+        view_score_columns(gamestate, g.Player1),
+        html.section([attrs.class("hand")], [view_hand(gamestate, g.Player1)]),
       ]),
-      view_card_pile(model.gamestate),
+      view_card_pile(gamestate),
     ]),
     popup(phase == g.End, case model.toggle_scoring {
-      True -> end_game_scoring(model.gamestate)
+      True -> end_game_scoring(gamestate)
       False -> html.Nothing
     }),
   ])
@@ -160,7 +145,7 @@ fn view_card_pile(state: g.GameState) -> html.Node(a) {
 fn view_score_totals(state: g.GameState) -> html.Node(a) {
   let totals = g.score_totals(state)
 
-  html.section([attrs.class("scores")], {
+  html.section([attrs.class("totals scores")], {
     use score <- list.map(totals)
     case score {
       #(Some(player), total) -> {
@@ -236,7 +221,6 @@ fn view_slots(
   player: g.Player,
   selected_card: Option(g.Card),
 ) -> html.Node(a) {
-  io.debug(selected_card)
   let columns = g.columns(state, player)
   let class = attrs.class("slot" <> " " <> player_class(player))
 
@@ -597,7 +581,12 @@ fn encode_slot(slot: g.Slot) -> BitArray {
 }
 
 fn encode_rank(rank: Int) -> BitArray {
-  <<int.to_string(rank):utf8>>
+  let string =
+    rank
+    |> int.to_string()
+    |> string.pad_left(2, "0")
+
+  <<string:utf8>>
 }
 
 fn encode_suit(suit: g.Suit) -> BitArray {

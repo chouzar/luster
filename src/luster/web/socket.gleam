@@ -7,7 +7,7 @@ import gleam/http/response.{type Response}
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{type Option, Some}
 import gleam/otp/actor
 import gleam/result.{try}
 import luster/games/three_line_poker as g
@@ -70,26 +70,14 @@ fn build_init(
   pubsub: PubSub,
 ) -> #(State, Option(process.Selector(Message))) {
   let self = process.new_subject()
-
   let _ = chip.register_as(pubsub, session_id, fn() { Ok(self) })
+  let model = tea.init()
+  let state = State(self, session_id, session, pubsub, model)
+  let selector =
+    process.new_selector()
+    |> process.selecting(self, identity)
 
-  let assert Ok(gamestate) = session.get(session)
-
-  let model =
-    tea.Model(
-      alert: None,
-      selected_card: None,
-      toggle_scoring: False,
-      gamestate: gamestate,
-    )
-
-  #(
-    State(self, session_id, session, pubsub, model),
-    Some(
-      process.new_selector()
-      |> process.selecting(self, identity),
-    ),
-  )
+  #(state, Some(selector))
 }
 
 fn on_close(state: State) -> Nil {
@@ -104,60 +92,45 @@ fn handle_message(
 ) -> actor.Next(a, State) {
   case message {
     Binary(bits) -> {
-      let result = {
-        use action <- try(parse_message(bits))
-        use gamestate <- try(session.get(state.session))
-
-        case action {
-          Play(message) -> {
-            case g.next(gamestate, message) {
-              Ok(gamestate) -> {
-                let Nil = session.set(state.session, gamestate)
-                let Nil =
-                  broadcast(state.pubsub, state.session_id, UpdateGameState)
-                Ok(state)
+      case parse_message(bits) {
+        Ok(action) -> {
+          let model = case action {
+            Play(message) -> {
+              case session.next(state.session, message) {
+                Ok(_gamestate) -> {
+                  state.model
+                }
+                Error(error) -> {
+                  tea.update(state.model, tea.Alert(error))
+                }
               }
+            }
 
-              Error(error) -> {
-                let model = tea.update(state.model, tea.Alert(error))
-                let state = State(..state, model: model)
-
-                model
-                |> tea.view()
-                |> nakai.to_inline_string()
-                |> tap(mist.send_text_frame(conn, _))
-
-                Ok(state)
-              }
+            Select(message) -> {
+              tea.update(state.model, message)
             }
           }
 
-          Select(message) -> {
-            io.debug(message)
-            let model = tea.update(state.model, message)
-            let state = State(..state, model: model)
+          let Nil = broadcast(state.pubsub, state.session_id, UpdateGameState)
 
-            model
-            |> tea.view()
-            |> nakai.to_inline_string()
-            |> tap(mist.send_text_frame(conn, _))
-
-            Ok(state)
-          }
+          let state = State(..state, model: model)
+          actor.continue(state)
         }
-      }
 
-      case result {
-        Ok(state) -> actor.continue(state)
-        Error(Nil) -> actor.continue(state)
+        Error(Nil) -> {
+          io.println("out of bound message:")
+          io.debug(bits)
+
+          actor.continue(state)
+        }
       }
     }
 
     Custom(UpdateGameState) -> {
       case session.get(state.session) {
         Ok(gamestate) -> {
-          tea.update(state.model, tea.Next(gamestate))
-          |> tea.view()
+          state.model
+          |> tea.view(gamestate)
           |> nakai.to_inline_string()
           |> tap(mist.send_text_frame(conn, _))
 
@@ -202,13 +175,11 @@ fn parse_message(bits: BitArray) -> Result(Action, Nil) {
       Ok(Select(tea.SelectCard(card)))
     }
 
-    <<"popup–toggle":utf8, _rest:bytes>> -> {
+    <<"popup-toggle":utf8, _rest:bytes>> -> {
       Ok(Select(tea.ToggleScoring))
     }
 
     _other -> {
-      io.println("out of bound message:")
-      io.debug(bits)
       Error(Nil)
     }
   }
@@ -230,8 +201,8 @@ fn decode_play_card(bits: BitArray) -> Result(#(g.Player, g.Slot, g.Card), Nil) 
     <<
       player:bytes-size(2),
       slot:bytes-size(1),
-      suit:bytes-size(2),
-      rank:bytes-size(1),
+      suit:bytes-size(3),
+      rank:bytes-size(2),
     >> -> {
       use player <- try(decode_player(player))
       use slot <- try(decode_slot(slot))
@@ -246,7 +217,7 @@ fn decode_play_card(bits: BitArray) -> Result(#(g.Player, g.Slot, g.Card), Nil) 
 
 fn decode_select_card(bits: BitArray) -> Result(#(g.Card), Nil) {
   case bits {
-    <<suit:bytes-size(3), rank:bytes-size(1)>> -> {
+    <<suit:bytes-size(3), rank:bytes-size(2)>> -> {
       use suit <- try(decode_suit(suit))
       use rank <- try(decode_rank(rank))
       Ok(#(g.Card(rank, suit)))
