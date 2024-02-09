@@ -1,16 +1,15 @@
-import chip
 import gleam/bit_array
-import gleam/erlang/process
+import gleam/erlang/process.{type Selector, type Subject, Normal}
 import gleam/function.{identity, tap}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
 import gleam/int
 import gleam/io
-import gleam/list
-import gleam/option.{type Option, Some}
-import gleam/otp/actor
+import gleam/option.{type Option, None, Some}
+import gleam/otp/actor.{type Next, Continue, Stop}
 import gleam/result.{try}
 import luster/games/three_line_poker as g
+import luster/systems/pubsub.{type PubSub}
 import luster/systems/session
 import luster/web/tea_game as tea
 import mist.{
@@ -18,9 +17,6 @@ import mist.{
   type WebsocketMessage, Binary, Closed, Custom, Shutdown, Text,
 }
 import nakai
-
-pub type PubSub =
-  process.Subject(chip.Message(String, Message))
 
 pub type Message {
   UpdateGameState
@@ -34,19 +30,18 @@ pub type Action {
 
 pub opaque type State {
   State(
-    self: process.Subject(Message),
-    session_id: String,
-    session: process.Subject(session.Message),
-    pubsub: PubSub,
+    session_id: Int,
+    session: Subject(session.Message),
+    pubsub: PubSub(Int, Message),
     model: tea.Model,
   )
 }
 
 pub fn start(
   request: Request(Connection),
-  session_id: String,
-  session: process.Subject(session.Message),
-  pubsub: PubSub,
+  session_id: Int,
+  session: Subject(session.Message),
+  pubsub: PubSub(Int, Message),
 ) -> Response(ResponseData) {
   mist.websocket(
     request: request,
@@ -56,32 +51,28 @@ pub fn start(
   )
 }
 
-pub fn broadcast(registry, channel, message) -> Nil {
-  chip.lookup(registry, channel)
-  |> list.map(fn(subject) { process.send(subject, message) })
-
-  Nil
-}
-
 fn build_init(
   _conn: WebsocketConnection,
-  session_id: String,
-  session: process.Subject(session.Message),
-  pubsub: PubSub,
-) -> #(State, Option(process.Selector(Message))) {
+  session_id: Int,
+  session: Subject(session.Message),
+  pubsub: PubSub(Int, Message),
+) -> #(State, Option(Selector(Message))) {
   let self = process.new_subject()
-  let _ = chip.register_as(pubsub, session_id, fn() { Ok(self) })
+  pubsub.register(pubsub, session_id, self)
   let model = tea.init()
-  let state = State(self, session_id, session, pubsub, model)
-  let selector =
-    process.new_selector()
-    |> process.selecting(self, identity)
 
-  #(state, Some(selector))
+  #(
+    State(session_id, session, pubsub, model),
+    Some(
+      process.new_selector()
+      |> process.selecting(self, identity),
+    ),
+  )
 }
 
 fn on_close(state: State) -> Nil {
-  io.println("closing a connection for session: " <> state.session_id)
+  let session_id = int.to_string(state.session_id)
+  io.println("closing a connection for session: " <> session_id)
   Nil
 }
 
@@ -89,71 +80,57 @@ fn handle_message(
   state: State,
   conn: WebsocketConnection,
   message: WebsocketMessage(Message),
-) -> actor.Next(a, State) {
+) -> Next(a, State) {
   case message {
     Binary(bits) -> {
       case parse_message(bits) {
         Ok(action) -> {
           let model = case action {
-            Play(message) -> {
+            Play(message) ->
               case session.next(state.session, message) {
-                Ok(_gamestate) -> {
-                  state.model
-                }
-                Error(error) -> {
-                  tea.update(state.model, tea.Alert(error))
-                }
+                Ok(_gamestate) -> state.model
+                Error(error) -> tea.update(state.model, tea.Alert(error))
               }
-            }
 
-            Select(message) -> {
-              tea.update(state.model, message)
-            }
+            Select(message) -> tea.update(state.model, message)
           }
 
-          let Nil = broadcast(state.pubsub, state.session_id, UpdateGameState)
+          pubsub.broadcast(state.pubsub, state.session_id, UpdateGameState)
 
           let state = State(..state, model: model)
-          actor.continue(state)
+          Continue(state, None)
         }
 
         Error(Nil) -> {
           io.println("out of bound message:")
           io.debug(bits)
-
-          actor.continue(state)
+          Continue(state, None)
         }
       }
     }
 
     Custom(UpdateGameState) -> {
-      case session.get(state.session) {
-        Ok(gamestate) -> {
-          state.model
-          |> tea.view(gamestate)
-          |> nakai.to_inline_string()
-          |> tap(mist.send_text_frame(conn, _))
+      let gamestate = session.gamestate(state.session)
 
-          actor.continue(state)
-        }
+      state.model
+      |> tea.view(gamestate)
+      |> nakai.to_inline_string()
+      |> tap(mist.send_text_frame(conn, _))
 
-        Error(Nil) -> {
-          actor.continue(state)
-        }
-      }
+      Continue(state, None)
     }
 
     Custom(Close) -> {
-      actor.Stop(process.Normal)
+      Stop(Normal)
     }
 
     Text(message) -> {
       io.println("out of bound message: " <> message)
-      actor.continue(state)
+      Continue(state, None)
     }
 
     Closed | Shutdown -> {
-      actor.Stop(process.Normal)
+      Stop(Normal)
     }
   }
 }

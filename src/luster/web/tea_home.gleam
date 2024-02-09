@@ -1,15 +1,17 @@
+import gleam/int
 import gleam/list
 import gleam/pair
 import nakai/html
 import nakai/html/attrs
+import luster/games/three_line_poker as g
 
 // --- Elmish Lobby --- //
 
-pub type Model(r) {
-  Model(games: List(#(String, r)))
+pub type Model {
+  Model(games: List(#(Int, g.GameState)))
 }
 
-pub fn view(model: Model(r)) -> html.Node(a) {
+pub fn view(model: Model) -> html.Node(a) {
   let ids = list.map(model.games, pair.first)
 
   html.Fragment([
@@ -25,7 +27,8 @@ fn create_game_form() -> html.Node(a) {
   ])
 }
 
-fn listed_lobby_game(id: String) -> html.Node(a) {
+fn listed_lobby_game(id: Int) -> html.Node(a) {
+  let id = int.to_string(id)
   let anchor = html.a_text([attrs.href("/battleline/" <> id)], nth(id))
   html.li([], [anchor])
 }

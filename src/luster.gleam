@@ -1,9 +1,9 @@
-import chip
 import envoy
 import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response
-import luster/systems/store
+import luster/systems/pubsub
+import luster/systems/sessions
 import luster/web
 import mist
 
@@ -22,20 +22,18 @@ import mist
 // custom types and addressing the register, de-register through callbacks.
 // OR accept Selectors
 
-// TODO: Chip could handle id generation through continuations
 // OR use ETS underneath
 
 // TODO: Create a compartment in Chip for unique subjects
 
 pub fn main() -> Nil {
-  let assert Ok(store) = store.start()
-  let assert Ok(session_registry) = chip.start()
-  let assert Ok(socket_registry) = chip.start()
+  let assert Ok(store) = sessions.start()
+  let assert Ok(pubsub) = pubsub.start()
 
   let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
     mist.ResponseData,
   ) {
-    web.router(request, store, session_registry, socket_registry)
+    web.router(request, store, pubsub)
   }
 
   let assert Ok(_server) =

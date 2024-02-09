@@ -1,101 +1,106 @@
-import gleam/erlang/process
+import gleam/erlang/process.{type Subject, Normal}
 import gleam/float
 import gleam/function.{identity}
 import gleam/int
+import gleam/option.{None}
 import gleam/list
-import gleam/otp/actor
-import gleam/result.{try}
-import luster/games/three_line_poker as tlp
+import gleam/otp/actor.{
+  type InitResult, type Next, type StartError, Continue, Ready, Spec, Stop,
+}
+import luster/games/three_line_poker as g
 import luster/systems/session
+import luster/systems/pubsub.{type PubSub}
 import luster/web/socket
 
 pub type Message {
   AssessMove
-  Stop
+  Halt
 }
 
 type State {
   State(
-    self: process.Subject(Message),
-    session_id: String,
-    player: tlp.Player,
-    session: process.Subject(session.Message),
-    pubsub: socket.PubSub,
+    self: Subject(Message),
+    session_id: Int,
+    player: g.Player,
+    session: Subject(session.Message),
+    pubsub: PubSub(Int, socket.Message),
   )
 }
 
 pub fn start(
-  player: tlp.Player,
-  session: process.Subject(session.Message),
-  pubsub: socket.PubSub,
-) -> Result(process.Subject(Message), actor.StartError) {
-  actor.start_spec(actor.Spec(
-    init: fn() { handle_init(player, session, pubsub) },
+  player: g.Player,
+  session_id: Int,
+  session: Subject(session.Message),
+  pubsub: PubSub(Int, socket.Message),
+) -> Result(Subject(Message), StartError) {
+  actor.start_spec(Spec(
+    init: fn() { handle_init(player, session_id, session, pubsub) },
     init_timeout: 10,
     loop: handle_message,
   ))
 }
 
 fn handle_init(
-  player: tlp.Player,
-  session: process.Subject(session.Message),
-  pubsub: socket.PubSub,
-) -> actor.InitResult(State, Message) {
+  player: g.Player,
+  session_id: Int,
+  session: Subject(session.Message),
+  pubsub: PubSub(Int, socket.Message),
+) -> InitResult(State, Message) {
   let self = process.new_subject()
-
-  let session_id = session.id(session)
 
   process.send(self, AssessMove)
 
-  actor.Ready(
+  Ready(
     State(self, session_id, player, session, pubsub),
     process.new_selector()
     |> process.selecting(self, identity),
   )
 }
 
-fn handle_message(message: Message, state: State) -> actor.Next(Message, State) {
+fn handle_message(message: Message, state: State) -> Next(Message, State) {
   case message {
     AssessMove -> {
-      let _ = {
-        use gamestate <- try(session.get(state.session))
-        use message <- try(assess_move(state.player, gamestate))
-        use gamestate <- try(make_move(gamestate, message))
-        let Nil = session.set(state.session, gamestate)
-        let Nil =
-          socket.broadcast(
-            state.pubsub,
-            state.session_id,
-            socket.UpdateGameState,
-          )
+      let gamestate = session.gamestate(state.session)
 
-        Ok(Nil)
+      case assess_move(state.player, gamestate) {
+        Ok(message) ->
+          case session.next(state.session, message) {
+            Ok(_gamestate) ->
+              pubsub.broadcast(
+                state.pubsub,
+                state.session_id,
+                socket.UpdateGameState,
+              )
+            Error(_) -> Nil
+          }
+
+        Error(Nil) -> Nil
       }
 
       let _timer = process.send_after(state.self, between(50, 50), AssessMove)
 
-      actor.continue(state)
+      Continue(state, None)
     }
 
-    Stop -> {
-      actor.Stop(process.Normal)
+    Halt -> {
+      Stop(Normal)
     }
   }
 }
 
 fn assess_move(
-  player: tlp.Player,
-  gamestate: tlp.GameState,
-) -> Result(tlp.Message, Nil) {
-  let hand = tlp.player_hand(gamestate, player)
-  let slots = tlp.available_plays(gamestate, player)
+  player: g.Player,
+  gamestate: g.GameState,
+) -> Result(g.Message, Nil) {
+  let hand = g.player_hand(gamestate, player)
+  let slots = g.available_plays(gamestate, player)
 
-  case list.length(hand), tlp.current_player(gamestate) {
-    size, current if size == tlp.max_hand_size && current == player -> {
+  case list.length(hand), g.current_player(gamestate) {
+    size, current if size == g.max_hand_size && current == player -> {
       Ok(play_card(player, slots, hand))
     }
 
-    size, current if size == tlp.max_hand_size && current != player -> {
+    size, current if size == g.max_hand_size && current != player -> {
       Error(Nil)
     }
 
@@ -118,7 +123,7 @@ fn assess_move(
   }
 }
 
-fn play_card(player, slots, hand) -> tlp.Message {
+fn play_card(player, slots, hand) -> g.Message {
   let assert Ok(slot) =
     slots
     |> list.shuffle()
@@ -127,18 +132,11 @@ fn play_card(player, slots, hand) -> tlp.Message {
     hand
     |> list.shuffle()
     |> list.first()
-  tlp.PlayCard(player, slot, card)
+  g.PlayCard(player, slot, card)
 }
 
-fn draw_card(player) -> tlp.Message {
-  tlp.DrawCard(player)
-}
-
-fn make_move(gamestate, message) {
-  case tlp.next(gamestate, message) {
-    Ok(gamestate) -> Ok(gamestate)
-    Error(_) -> Error(Nil)
-  }
+fn draw_card(player) -> g.Message {
+  g.DrawCard(player)
 }
 
 fn between(start: Int, end: Int) -> Int {

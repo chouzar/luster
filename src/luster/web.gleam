@@ -1,16 +1,17 @@
-import chip
 import gleam/bit_array
 import gleam/bytes_builder
 import gleam/erlang
-import gleam/erlang/process
 import gleam/http
 import gleam/http/request
 import gleam/http/response
+import gleam/int
+import gleam/list
 import gleam/string
 import gleam/uri
 import luster/systems/comp
 import luster/systems/session
-import luster/systems/store
+import luster/systems/sessions
+import luster/systems/pubsub
 import luster/games/three_line_poker as tlp
 import luster/web/socket
 import luster/web/tea_game
@@ -22,13 +23,14 @@ import nakai/html/attrs
 
 pub fn router(
   request: request.Request(mist.Connection),
-  store: process.Subject(store.Message(tlp.GameState)),
-  session_registry: process.Subject(chip.Message(String, session.Message)),
-  socket_registry: process.Subject(chip.Message(String, socket.Message)),
+  store: sessions.Store,
+  pubsub: pubsub.PubSub(Int, socket.Message),
 ) -> response.Response(mist.ResponseData) {
   case request.method, request.path_segments(request) {
     http.Get, [] -> {
-      let records = store.all(store)
+      let records =
+        sessions.all(store)
+        |> list.map(fn(record) { #(record.0, session.gamestate(record.1)) })
 
       tea_home.Model(records)
       |> tea_home.view()
@@ -36,27 +38,33 @@ pub fn router(
     }
 
     http.Post, ["battleline"] -> {
-      let assert Ok(session) = session.start(store, session_registry)
-      let assert Ok(_comp_1) = comp.start(tlp.Player1, session, socket_registry)
-      let assert Ok(_comp_2) = comp.start(tlp.Player2, session, socket_registry)
+      let assert Ok(#(id, subject)) = sessions.create(store)
+      let assert Ok(_comp_1) = comp.start(tlp.Player1, id, subject, pubsub)
+      let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
 
       redirect("/")
     }
 
-    http.Get, ["battleline", id] -> {
-      case store.one(store, id) {
-        Ok(gamestate) ->
-          tea_game.init()
-          |> tea_game.view(gamestate)
-          |> render(with: fn(body) { layout(id, body) })
+    http.Get, ["battleline", session_id] -> {
+      let assert Ok(id) = int.parse(session_id)
 
-        Error(_) -> redirect("/")
+      case sessions.one(store, id) {
+        Ok(subject) ->
+          tea_game.init()
+          |> tea_game.view(session.gamestate(subject))
+          |> render(with: fn(body) { layout(session_id, body) })
+
+        Error(Nil) -> redirect("/")
       }
     }
 
     http.Get, ["events", session_id] -> {
-      let assert [session] = chip.lookup(session_registry, session_id)
-      socket.start(request, session_id, session, socket_registry)
+      let assert Ok(id) = int.parse(session_id)
+
+      case sessions.one(store, id) {
+        Ok(subject) -> socket.start(request, id, subject, pubsub)
+        Error(Nil) -> not_found()
+      }
     }
 
     http.Get, ["assets", ..] -> {

@@ -459,7 +459,7 @@ fn subtotals_table(card: Int, formation: Int, flank: Int) -> html.Node(a) {
   html.table([], [
     html.tbody([], [
       html.tr([], [
-        html.td_text([], "Cards Played"),
+        html.td_text([], "Point distribution"),
         html.td_text([], int.to_string(card)),
       ]),
       html.tr([], [
@@ -548,7 +548,7 @@ fn encode_play_card(player: g.Player, slot: g.Slot, card: g.Card) -> BitArray {
 }
 
 fn encode_select_card(player: g.Player, card: g.Card) -> BitArray {
-  let player = encode_player(player)
+  let _player = encode_player(player)
   let suit = encode_suit(card.suit)
   let rank = encode_rank(card.rank)
   //<<"select-card":utf8, player:bits, suit:bits, rank:bits>>
