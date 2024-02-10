@@ -1,3 +1,22 @@
+.lobby-games {
+  list-style: none;
+}
+
+/* This is what makes the click through elements work */
+
+div[data-event]>* {
+  pointer-events: none;
+}
+
+div[data-event="popup-toggle"] {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  top: 0;
+}
+
+/* Page level styles */
+
 :root {
   --white: #ffffff;
   --gray: #b0b0b0;
@@ -17,22 +36,82 @@
   --yellow: #f0f2b7f0;
 }
 
-div[data-event]>* {
-  pointer-events: none;
-}
-
-div[data-event="popup-toggle"] {
-  position: absolute;
-  width: 100%;
-  height: 100vh;
-  top: 0;
-}
-
 body {
   margin: 0;
   padding: 0;
   background-color: #f0f1ff;
 }
+
+/* Layout and sections */
+
+.player-info {
+  display: flex;
+  flex-direction: row;
+  background-color: var(--gray);
+  font-family: sans-serif;
+  height: 10vh;
+}
+
+.player-info .player {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6vh;
+  flex: 1;
+}
+
+.player-info .status {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.player-info .status .action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  background-color: #6588ba;
+  font-size: 3.2vh;
+  flex: 1 1 ;
+}
+
+.player-info .status .alert {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5vh;
+  flex: 1 1 ;
+}
+
+.board {
+  height: 90vh;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.grid .side {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  background-color: yellow;
+  flex: 1 1 20vh;
+}
+
+.grid .center {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  background-color: orange;
+  flex: 2 2 50vh;
+}
+
 
 .popup {
   position: absolute;
@@ -46,7 +125,7 @@ body {
 }
 
 .popup>div {
-  border-radius: 5px;
+  border-radius: 0.5vh;
 }
 
 .popup h1,
@@ -55,71 +134,36 @@ body {
   margin: 0;
 }
 
-.lobby-games {
-  list-style: none;
-}
-
-button {
-  background-color: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-
-.alerts {
-  display: flex;
-  flex-direction: column;
-  height: 4vh;
-}
-
-.alerts>.alert {
-  flex-grow: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: verdana, tahoma, sans-serif;
-  font-style: normal;
-  font-size: 1.25rem;
-}
-
-.alerts>.alert.success {
+.alert.green {
   background-color: rgb(193, 255, 193);
   color: #4f4f4f;
 }
 
-.alerts>.alert.error {
+.alert.red {
   background-color: rgb(255, 137, 137);
   color: #4f4f4f;
 }
 
-.alerts>.alert.info {
+.alert.purple {
   background-color: rgb(112, 112, 255);
   color: white;
 }
 
-.alerts>.alert.warning {
+.alert.yellow {
   background-color: rgb(255, 255, 193);
   color: #4f4f4f;
 }
 
-.board .scoring {
-  padding: 20px;
-  flex-grow: 2;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .cheatsheet {
   font-size: 1.5vh;
-  min-width: 250px;
+  min-width: 25vh;
   border-collapse: collapse;
   background-color: var(--white);
 }
 
 .cheatsheet th,
 .cheatsheet td {
-  border: 1px solid var(--gray);
+  border: 0.1vh solid var(--gray);
 }
 
 .cheatsheet tr {
@@ -147,7 +191,7 @@ button {
 }
 
 .score-group table td {
-  padding: 5px 10px;
+  padding: 0.5vh 1.0vh;
 }
 
 .score-group table td:nth-child(1) {
@@ -165,47 +209,23 @@ button {
   font-size: 1.75vh;
 }
 
-.board {
-  display: flex;
-  flex-direction: row;
-  height: 96vh;
+.hand>div {
+  display: inline-block;
 }
 
-.board>.field {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 0;
-}
-
-.board>.deck {
-  flex-grow: 2;
-  flex-direction: column;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.board>.field>.hand {
-  display: flex;
-  flex-direction: row;
-  flex-grow: 2;
-  justify-content: center;
-  align-items: center;
-}
-
-.board>.field>.scores {
+.scores {
   display: flex;
   flex-direction: row;
 }
 
-.board>.field>.scores>.score {
-  outline: 1px solid var(--gray);
+.scores>.score {
+  outline: 0.1vh solid var(--gray);
   background-color: var(--white);
-  height: 3vh;
+  height: 2vh;
   width: 7.5vh;
   border-radius: 0.25vh;
-  margin: 4px;
-  padding: 5px;
+  margin: 0.32vh;
+  padding: 0.4vh;
   display: flex;
   flex-direction: row;
   flex-grow: 0;
@@ -215,85 +235,63 @@ button {
   font-family: arial;
 }
 
-.board>.field>.scores.general>.score {
+.scores.general>.score {
   justify-content: space-between;
 }
 
-.board>.field>.scores.totals>.score.player-1 {
-  outline: 3px solid var(--dark-blue);
+.scores.totals>.score.player-1 {
+  outline: 0.3vh solid var(--dark-blue);
 }
 
-.board>.field>.scores.totals>.score.player-2 {
-  outline: 3px solid var(--dark-red);
+.scores.totals>.score.player-2 {
+  outline: 0.3vh solid var(--dark-red);
 }
 
-.board>.field>.scores>.score.player-1 {
+.scores>.score.player-1 {
   color: var(--font-blue);
 }
 
-.board>.field>.scores>.score.player-2 {
+.scores>.score.player-2 {
   color: var(--font-red);
 }
 
-.board>.field>.scores>.score>.formation {
+.scores>.score>.formation {
   color: #4d8848;
 }
 
-.board>.field>.scores>.score>.flank {
+.scores>.score>.flank {
   color: var(--font-purple);
 }
 
-.board>.field>.flags {
+
+.slots {
   display: flex;
   flex-direction: row;
 }
 
-.board>.field>.flags>.flag {
-  outline: 1px solid black;
-  height: 4vh;
+.slots>div {
+  flex: 1 1 7.5vh
+}
+
+.slots .slot {
+  position: relative;
+  background-color: var(--light-green);
+  outline-color: var(--dark-green);
+  outline-style: solid;
+  outline-width: 0.2vh;
+  height: 18.25vh;
   width: 7.5vh;
   border-radius: 0.25vh;
-  margin: 4px;
-  padding: 5px;
-  display: flex;
-  flex-direction: row;
-  flex-grow: 0;
-  justify-content: center;
-  align-items: center;
+  margin: 0.32vh;
+  padding: 0.4vh;
 }
 
-.board>.field>.battleline {
-  display: flex;
-  flex-direction: row;
-  flex-grow: 6;
-  justify-content: center;
-  align-items: center;
-}
+/* Individual Elements */
 
 .draw-pile {
   position: relative;
   height: 10.5vh;
   width: 7.5vh;
-  margin: 1vh;
-}
-
-.board>.field>.slots {
-  display: flex;
-  flex-direction: row;
-  flex-grow: 0;
-}
-
-.board>.field>.slots .slot {
-  position: relative;
-  background-color: var(--light-green);
-  outline-color: var(--dark-green);
-  outline-style: solid;
-  outline-width: 2px;
-  height: 220px;
-  width: 7.5vh;
-  border-radius: 0.25vh;
-  margin: 4px;
-  padding: 5px;
 }
 
 .slot>.card.front {
@@ -301,37 +299,35 @@ button {
 }
 
 .player-2.slot>.card:nth-child(1) {
-  bottom: 5px;
+  bottom: 0.5vh;
 }
 
 .player-2.slot>.card:nth-child(2) {
-  bottom: 48px;
+  bottom: 4.3vh;
 }
 
 .player-2.slot>.card:nth-child(3) {
-  bottom: 91px;
+  bottom: 8.1vh;
 }
 
 .player-1.slot>.card:nth-child(1) {
-  top: 5px;
+  top: 0.5vh;
 }
 
 .player-1.slot>.card:nth-child(2) {
-  top: 48px;
+  top: 4.3vh;
 }
 
 .player-1.slot>.card:nth-child(3) {
-  top: 91px;
+  top: 8.1vh;
 }
 
 .card {
-  outline: 1px solid black;
+  outline: 0.1vh solid black;
   /* standard size card 3.5in by 2.5in */
   height: 10.5vh;
   width: 7.5vh;
   border-radius: 0.75vh;
-  margin: 0px;
-  padding: 0px;
 }
 
 .red {
@@ -353,7 +349,7 @@ button {
 .card.front {
   position: relative;
   display: flex;
-  justify-content: center;
+  justify-content: space-evenly;
   background-color: white;
 }
 
@@ -363,106 +359,100 @@ button {
 }
 
 .card.front .graphic {
-  font-size: 3em;
+  font-size: 4.5vh;
   margin: 0;
   display: flex;
   align-items: center;
 }
 
-.card.front .upper-left {
-  position: absolute;
-  top: 0px;
-  left: 0px;
+.card.front .corner {
   margin: 0.25em;
-  font-size: 1em;
+  font-size: 1.5vh;
+  display: flex;
+}
+
+.card.front .corner.upper-left {
+  flex-direction: column;
 }
 
 .card.front .bottom-right {
-  position: absolute;
-  bottom: 0px;
-  right: 0px;
-  margin: 0.25em;
-  font-size: 1em;
+  flex-direction: column-reverse;
 }
 
 .draw-pile .card {
   position: absolute;
-  margin: 0px;
+  margin: 0vh;
 }
 
 .draw-pile .card:nth-child(1) {
-  bottom: 0px;
-  right: 0px;
+  bottom: 0vh;
+  right: 0vh;
 }
 
 .draw-pile .card:nth-child(2) {
-  bottom: 2px;
-  right: 2px;
+  bottom: 0.15vh;
+  right: 0.15vh;
 }
 
 .draw-pile .card:nth-child(3) {
-  bottom: 4px;
-  right: 4px;
+  bottom: 0.3vh;
+  right: 0.3vh;
 }
 
 .draw-pile .card:nth-child(4) {
-  bottom: 6px;
-  right: 6px;
+  bottom: 0.45vh;
+  right: 0.45vh;
 }
 
 .draw-pile .card:nth-child(5) {
-  bottom: 8px;
-  right: 8px;
+  bottom: 0.6vh;
+  right: 0.6vh;
 }
 
 .draw-pile .card:nth-child(6) {
-  bottom: 10px;
-  right: 10px;
+  bottom: 0.75vh;
+  right: 0.75vh;
 }
 
 .draw-pile .card:nth-child(7) {
-  bottom: 12px;
-  right: 12px;
+  bottom: 0.9vh;
+  right: 0.9vh;
 }
 
 .draw-pile .card:nth-child(8) {
-  bottom: 14px;
-  right: 14px;
+  bottom: 1.05vh;
+  right: 1.05vh;
 }
 
 .draw-pile .card:nth-child(9) {
-  bottom: 16px;
-  right: 16px;
+  bottom: 1.20vh;
+  right: 1.20vh;
 }
 
 .draw-pile .card:nth-child(10) {
-  bottom: 18px;
-  right: 18px;
+  bottom: 1.35vh;
+  right: 1.35vh;
 }
 
 .draw-pile .card:nth-child(11) {
-  bottom: 20px;
-  right: 20px;
+  bottom: 1.50vh;
+  right: 1.50vh;
 }
 
 .draw-pile .card:nth-child(12) {
-  bottom: 22px;
-  right: 22px;
+  bottom: 1.65vh;
+  right: 1.65vh;
 }
 
 .draw-pile .card:nth-child(13) {
-  bottom: 24px;
-  right: 24px;
-}
-
-.battleline .card {
-  margin: 6px;
+  bottom: 1.8vh;
+  right: 1.8vh;
 }
 
 /* took inspiration from https://codepen.io/apo11oCreed/pen/WNEgJE */
 /* and https://gleam.run easter egg :sparkles: */
 .sparkle {
-  outline: 1px solid #d070b8;
+  outline: 0.1vh solid #d070b8;
   color: var(--not-black);
   background:
     repeating-linear-gradient(40deg,
@@ -489,4 +479,84 @@ button {
       #dcd2fb 6em);
 
   background-blend-mode: multiply;
+}
+
+
+/* Try this */
+.row {
+  display: flex;
+  flex-direction: column;
+}
+
+.row.center-x {
+  align-items: center;
+}
+
+.row.center-y {
+  justify-content: center;
+}
+
+.row.evenly {
+  justify-content: space-evenly;
+}
+
+.column {
+  display: flex;
+  flex-direction: row;
+}
+
+.column.center-x {
+  justify-content: center;
+}
+
+.column.center-y {
+  align-items: center;
+}
+
+.s1 {
+  flex: 1 1;
+}
+
+.s2 {
+  flex: 2 2;
+}
+
+.s3 {
+  flex: 3 3;
+}
+
+.s4 {
+  flex: 4 4;
+}
+
+.s5 {
+  flex: 5 5;
+}
+
+.s6 {
+  flex: 6 6;
+}
+
+.s7 {
+  flex: 7 7;
+}
+
+.s8 {
+  flex: 8 8;
+}
+
+.s9 {
+  flex: 9 9;
+}
+
+.s10 {
+  flex: 10 10;
+}
+
+.s11 {
+  flex: 11 11;
+}
+
+.s12 {
+  flex: 12 12;
 }

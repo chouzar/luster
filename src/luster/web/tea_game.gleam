@@ -44,38 +44,62 @@ pub fn update(model: Model, message: Message) -> Model {
   }
 }
 
-pub fn view(model: Model, gamestate: g.GameState) -> html.Node(a) {
-  let phase = g.current_phase(gamestate)
+pub fn view(model: Model, state: g.GameState) -> html.Node(a) {
+  let phase = g.current_phase(state)
 
   html.Fragment([
-    view_game_info(gamestate),
-    view_alert(model.alert),
-    html.div([attrs.class("board")], [
-      html.div([attrs.class("deck")], []),
-      html.div([attrs.class("field")], [
-        html.section([attrs.class("hand")], [view_hand(gamestate, g.Player2)]),
-        view_score_columns(gamestate, g.Player2),
-        view_slots(gamestate, g.Player2, model.selected_card),
-        view_score_totals(gamestate),
-        view_slots(gamestate, g.Player1, model.selected_card),
-        view_score_columns(gamestate, g.Player1),
-        html.section([attrs.class("hand")], [view_hand(gamestate, g.Player1)]),
-      ]),
-      view_card_pile(gamestate),
-    ]),
+    game_info(state, model.alert),
+    board(model, state),
+    // TODO: Should be a section
     popup(phase == g.End, case model.toggle_scoring {
-      True -> end_game_scoring(gamestate)
+      True -> end_game_scoring(state)
       False -> html.Nothing
     }),
   ])
 }
 
+fn board(model: Model, state: g.GameState) -> html.Node(a) {
+  html.section([attrs.class("board row evenly")], [
+    html.div([attrs.class("column")], [
+      html.div([attrs.class("s1")], [deck(state, g.Player2)]),
+      html.div([attrs.class("s3")], [hand(state, g.Player2)]),
+    ]),
+    html.div([attrs.class("row center-x")], [
+      html.div([attrs.class("s2 column center-x")], [
+        view_score_columns(state, g.Player2),
+      ]),
+      html.div([attrs.class("s4 column center-x")], [
+        view_slots(state, g.Player2, model.selected_card),
+      ]),
+      html.div([attrs.class("s2 column center-x")], [view_score_totals(state)]),
+      html.div([attrs.class("s4 column center-x")], [
+        view_slots(state, g.Player1, model.selected_card),
+      ]),
+      html.div([attrs.class("s2 column center-x")], [
+        view_score_columns(state, g.Player1),
+      ]),
+    ]),
+    html.div([attrs.class("column")], [
+      html.div([attrs.class("s3")], [hand(state, g.Player1)]),
+      html.div([attrs.class("s1")], [deck(state, g.Player1)]),
+    ]),
+  ])
+}
+
 // --- View board segments --- //
 
-fn view_game_info(state: g.GameState) -> html.Node(a) {
-  let size =
-    g.deck_size(state)
-    |> int.to_string()
+fn game_info(state: g.GameState, alert: Option(g.Errors)) -> html.Node(a) {
+  let #(color, message) = case alert {
+    Some(g.InvalidAction(_)) -> #("red", "Invalid Action")
+    Some(g.NotCurrentPhase) -> #("yellow", "Not current phase")
+    Some(g.NotCurrentPlayer) -> #("yellow", "Not current player")
+    Some(g.NoCardInHand) -> #("yellow", "Card not in hand")
+    Some(g.EmptyDeck) -> #("green", "Deck already empty")
+    Some(g.MaxHandReached) -> #("green", "Hand at max")
+    Some(g.NotClaimableSlot) -> #("green", "Slot is not claimable")
+    Some(g.NotPlayableSlot) -> #("green", "Slot is not playable")
+    None -> #("purple", "")
+  }
 
   let phase = case g.current_turn(state), g.current_phase(state) {
     0, g.Draw -> "Initial Draw"
@@ -85,67 +109,29 @@ fn view_game_info(state: g.GameState) -> html.Node(a) {
   }
 
   let player = case g.current_player(state) {
-    g.Player1 -> "Player 1"
-    g.Player2 -> "Player 2"
+    g.Player1 -> "P1 Turn"
+    g.Player2 -> "P2 Turn"
   }
 
-  html.section([attrs.id("alert-message"), attrs.class("alerts")], [
-    html.div([], [
-      html.span_text([], "Deck size: " <> size),
-      html.span_text([], "Phase: " <> phase),
-      html.span_text([], "Current player: " <> player),
+  html.section([attrs.class("player-info")], [
+    html.div([attrs.class("player")], [html.span_text([], player)]),
+    html.div([attrs.class("status")], [
+      html.div([attrs.class("action")], [html.span_text([], phase)]),
+      html.div([attrs.class("alert " <> color)], [html.span_text([], message)]),
     ]),
   ])
 }
 
-fn view_alert(alert: Option(g.Errors)) -> html.Node(a) {
-  case alert {
-    Some(error) -> {
-      html.section([attrs.id("alert-message"), attrs.class("alerts")], [
-        {
-          let #(color, message) = case error {
-            g.InvalidAction(_) -> #("error", "Invalid Action")
-            g.NotCurrentPhase -> #("warning", "Not current phase")
-            g.NotCurrentPlayer -> #("warning", "Not current player")
-            g.NoCardInHand -> #("warning", "Card not in hand")
-            g.EmptyDeck -> #("info", "Deck already empty")
-            g.MaxHandReached -> #("info", "Hand at max")
-            g.NotClaimableSlot -> #("info", "Slot is not claimable")
-            g.NotPlayableSlot -> #("info", "Slot is not playable")
-          }
-
-          html.div([attrs.class("alert " <> color)], [
-            html.span_text([], message),
-          ])
-        },
-      ])
-    }
-
-    None -> {
-      html.Fragment([])
-    }
-  }
-}
-
-fn view_card_pile(state: g.GameState) -> html.Node(a) {
+fn deck(state: g.GameState, player: g.Player) -> html.Node(a) {
   let size = g.deck_size(state)
 
-  html.div([attrs.class("deck")], [
-    click(
-      [#("event", encode_draw_card(g.Player2))],
-      html.section([attrs.class("draw-pile")], [draw_deck(size)]),
-    ),
-    click(
-      [#("event", encode_draw_card(g.Player1))],
-      html.section([attrs.class("draw-pile")], [draw_deck(size)]),
-    ),
-  ])
+  click([#("event", encode_draw_card(player))], pile(size))
 }
 
 fn view_score_totals(state: g.GameState) -> html.Node(a) {
   let totals = g.score_totals(state)
 
-  html.section([attrs.class("totals scores")], {
+  html.div([attrs.class("totals scores")], {
     use score <- list.map(totals)
     case score {
       #(Some(player), total) -> {
@@ -173,7 +159,7 @@ fn view_score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
     g.Player2 -> list.map(columns, pair.second)
   }
 
-  html.section([attrs.class("scores")], {
+  html.div([attrs.class("scores")], {
     use score <- list.map(scores)
     let card = int.to_string(score.score)
     let formation = int.to_string(score.bonus_formation)
@@ -206,10 +192,11 @@ fn view_score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
   })
 }
 
-fn view_hand(state: g.GameState, player: g.Player) -> html.Node(a) {
+fn hand(state: g.GameState, player: g.Player) -> html.Node(a) {
   let hand = g.player_hand(state, of: player)
 
-  html.Fragment(
+  html.div(
+    [attrs.class("hand")],
     list.map(hand, fn(card) {
       click([#("event", encode_select_card(player, card))], card_front(card))
     }),
@@ -224,7 +211,7 @@ fn view_slots(
   let columns = g.columns(state, player)
   let class = attrs.class("slot" <> " " <> player_class(player))
 
-  html.section([attrs.class("slots")], {
+  html.div([attrs.class("slots")], {
     use slot_column <- list.map(columns)
     let #(slot, column) = slot_column
 
@@ -248,19 +235,19 @@ fn card_front(card: g.Card) -> html.Node(a) {
   let color = suit_color(card.suit)
 
   html.div([attrs.class("card front " <> color)], [
-    html.div([attrs.class("upper-left")], [
+    html.div([attrs.class("corner upper-left")], [
       html.p_text([], rank),
       html.p_text([], utf),
     ]),
     html.div([attrs.class("graphic")], [html.p_text([], utf)]),
-    html.div([attrs.class("bottom-right")], [
+    html.div([attrs.class("corner bottom-right")], [
       html.p_text([], rank),
       html.p_text([], utf),
     ]),
   ])
 }
 
-fn draw_deck(size: Int) -> html.Node(a) {
+fn pile(size: Int) -> html.Node(a) {
   let count = case size {
     x if x > 48 -> 13
     x if x > 44 -> 12
@@ -279,7 +266,7 @@ fn draw_deck(size: Int) -> html.Node(a) {
   }
 
   let card = card_back()
-  html.Fragment(list.repeat(card, count))
+  html.div([attrs.class("draw-pile")], list.repeat(card, count))
 }
 
 fn card_back() -> html.Node(a) {
