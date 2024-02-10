@@ -47,41 +47,46 @@ pub fn update(model: Model, message: Message) -> Model {
 pub fn view(model: Model, state: g.GameState) -> html.Node(a) {
   let phase = g.current_phase(state)
 
-  html.Fragment([
-    game_info(state, model.alert),
-    board(model, state),
-    // TODO: Should be a section
-    popup(phase == g.End, case model.toggle_scoring {
-      True -> end_game_scoring(state)
-      False -> html.Nothing
-    }),
-  ])
+  html.Fragment([game_info(state, model.alert), board(model, state)])
+  // TODO: Should be a section
+  //popup(phase == g.End, case model.toggle_scoring {
+  //  True -> end_game_scoring(state)
+  //  False -> html.Nothing
+  //}),
 }
 
 fn board(model: Model, state: g.GameState) -> html.Node(a) {
   html.section([attrs.class("board row evenly")], [
     html.div([attrs.class("column")], [
-      html.div([attrs.class("s1")], [deck(state, g.Player2)]),
-      html.div([attrs.class("s3")], [hand(state, g.Player2)]),
-    ]),
-    html.div([attrs.class("row center-x")], [
-      html.div([attrs.class("s2 column center-x")], [
-        view_score_columns(state, g.Player2),
-      ]),
-      html.div([attrs.class("s4 column center-x")], [
-        view_slots(state, g.Player2, model.selected_card),
-      ]),
-      html.div([attrs.class("s2 column center-x")], [view_score_totals(state)]),
-      html.div([attrs.class("s4 column center-x")], [
-        view_slots(state, g.Player1, model.selected_card),
-      ]),
-      html.div([attrs.class("s2 column center-x")], [
-        view_score_columns(state, g.Player1),
-      ]),
+      html.div([attrs.class("s2")], []),
+      html.div([attrs.class("s2 column center")], [deck(state, g.Player2)]),
+      html.div([attrs.class("s6 column center")], [hand(state, g.Player2)]),
+      html.div([attrs.class("s2")], []),
     ]),
     html.div([attrs.class("column")], [
-      html.div([attrs.class("s3")], [hand(state, g.Player1)]),
-      html.div([attrs.class("s1")], [deck(state, g.Player1)]),
+      html.div([attrs.class("s2")], []),
+      html.div([attrs.class("s8 row")], [
+        html.div([attrs.class("column center")], [
+          view_score_columns(state, g.Player2),
+        ]),
+        html.div([attrs.class("column center")], [
+          view_slots(state, g.Player2, model.selected_card),
+        ]),
+        html.div([attrs.class("column center")], [view_score_totals(state)]),
+        html.div([attrs.class("column center")], [
+          view_slots(state, g.Player1, model.selected_card),
+        ]),
+        html.div([attrs.class("column center")], [
+          view_score_columns(state, g.Player1),
+        ]),
+      ]),
+      html.div([attrs.class("s2")], []),
+    ]),
+    html.div([attrs.class("column")], [
+      html.div([attrs.class("s2")], []),
+      html.div([attrs.class("s6 column center")], [hand(state, g.Player1)]),
+      html.div([attrs.class("s2 column center")], [deck(state, g.Player1)]),
+      html.div([attrs.class("s2")], []),
     ]),
   ])
 }
@@ -196,7 +201,7 @@ fn hand(state: g.GameState, player: g.Player) -> html.Node(a) {
   let hand = g.player_hand(state, of: player)
 
   html.div(
-    [attrs.class("hand")],
+    [attrs.class("hand column")],
     list.map(hand, fn(card) {
       click([#("event", encode_select_card(player, card))], card_front(card))
     }),

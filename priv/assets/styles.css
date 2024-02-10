@@ -10,7 +10,7 @@ div[data-event]>* {
 
 div[data-event="popup-toggle"] {
   position: absolute;
-  width: 100%;
+  width: 100vh;
   height: 100vh;
   top: 0;
 }
@@ -73,7 +73,7 @@ body {
   color: var(--white);
   background-color: #6588ba;
   font-size: 3.2vh;
-  flex: 1 1 ;
+  flex: 1 1;
 }
 
 .player-info .status .alert {
@@ -81,44 +81,19 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 2.5vh;
-  flex: 1 1 ;
+  flex: 1 1;
 }
 
 .board {
   height: 90vh;
 }
 
-.grid {
-  display: flex;
-  flex-direction: column;
-}
-
-
-.grid .side {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  background-color: yellow;
-  flex: 1 1 20vh;
-}
-
-.grid .center {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  background-color: orange;
-  flex: 2 2 50vh;
-}
-
-
 .popup {
   position: absolute;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
+  width: 100vh;
   height: 100vh;
   font-size: 5vh;
   text-align: center;
@@ -156,7 +131,7 @@ body {
 
 .cheatsheet {
   font-size: 1.5vh;
-  min-width: 25vh;
+  width: 25vh;
   border-collapse: collapse;
   background-color: var(--white);
 }
@@ -186,9 +161,6 @@ body {
   padding: 0 2vh 0 2vh;
 }
 
-.score-group table {
-  width: 100%;
-}
 
 .score-group table td {
   padding: 0.5vh 1.0vh;
@@ -209,10 +181,6 @@ body {
   font-size: 1.75vh;
 }
 
-.hand>div {
-  display: inline-block;
-}
-
 .scores {
   display: flex;
   flex-direction: row;
@@ -223,6 +191,7 @@ body {
   background-color: var(--white);
   height: 2vh;
   width: 7.5vh;
+
   border-radius: 0.25vh;
   margin: 0.32vh;
   padding: 0.4vh;
@@ -269,10 +238,6 @@ body {
   flex-direction: row;
 }
 
-.slots>div {
-  flex: 1 1 7.5vh
-}
-
 .slots .slot {
   position: relative;
   background-color: var(--light-green);
@@ -281,6 +246,7 @@ body {
   outline-width: 0.2vh;
   height: 18.25vh;
   width: 7.5vh;
+
   border-radius: 0.25vh;
   margin: 0.32vh;
   padding: 0.4vh;
@@ -488,29 +454,17 @@ body {
   flex-direction: column;
 }
 
-.row.center-x {
-  align-items: center;
-}
-
-.row.center-y {
-  justify-content: center;
-}
-
-.row.evenly {
-  justify-content: space-evenly;
-}
-
 .column {
   display: flex;
   flex-direction: row;
 }
 
-.column.center-x {
-  justify-content: center;
+.evenly {
+  justify-content: space-evenly;
 }
 
-.column.center-y {
-  align-items: center;
+.center {
+  justify-content: center;
 }
 
 .s1 {
