@@ -19,7 +19,7 @@ const flush = 5
 
 const pair = 3
 
-const flank_bonus = 1
+const flank_bonus = 5
 
 const highcard = 0
 

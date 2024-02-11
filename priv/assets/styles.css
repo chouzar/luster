@@ -1,3 +1,5 @@
+/* TODO: Adapt exceeding 7.5 vh slots to mobile */
+
 .lobby-games {
   list-style: none;
 }
@@ -19,16 +21,20 @@ div[data-event="popup-toggle"] {
 
 :root {
   --white: #ffffff;
+  --light-gray: #f0f1ff;
   --gray: #b0b0b0;
+  
+  --dark-gray: #303030;
   --light-blue: #4483d529;
   --dark-blue: #4483d5ab;
   --font-blue: #4483d5;
   --light-red: #ffc0ef45;
   --dark-red: #d544a3ab;
   --light-green: #eaffdd85;
-  --dark-green: #b0dd96c4;
+  --dark-green: #4d8848;
   --font-red: #d544a3;
   --font-purple: #4f40ffc9;
+  --dark-purple: #6588ba;
   --dubious-light-green: #b7cc91ad;
   --dubious-dark-green: #436c3b99;
   --not-black: #44230f;
@@ -39,7 +45,7 @@ div[data-event="popup-toggle"] {
 body {
   margin: 0;
   padding: 0;
-  background-color: #f0f1ff;
+  background-color: var(--light-gray);
 }
 
 /* Layout and sections */
@@ -71,7 +77,7 @@ body {
   align-items: center;
   justify-content: center;
   color: var(--white);
-  background-color: #6588ba;
+  background-color: var(--dark-purple);
   font-size: 3.2vh;
   flex: 1 1;
 }
@@ -111,22 +117,22 @@ body {
 
 .alert.green {
   background-color: rgb(193, 255, 193);
-  color: #4f4f4f;
+  color: var(--dark-gray)
 }
 
 .alert.red {
   background-color: rgb(255, 137, 137);
-  color: #4f4f4f;
+  color: var(--dark-gray);
 }
 
 .alert.purple {
   background-color: rgb(112, 112, 255);
-  color: white;
+  color: var(--white);
 }
 
 .alert.yellow {
   background-color: rgb(255, 255, 193);
-  color: #4f4f4f;
+  color: var(--dark-gray);
 }
 
 .cheatsheet {
@@ -225,7 +231,7 @@ body {
 }
 
 .scores>.score>.formation {
-  color: #4d8848;
+  color: var(--dark-green);
 }
 
 .scores>.score>.flank {
@@ -289,8 +295,8 @@ body {
 }
 
 .card {
-  outline: 0.1vh solid black;
   /* standard size card 3.5in by 2.5in */
+  outline: 0.1vh solid #b5b5b5;
   height: 10.5vh;
   width: 7.5vh;
   border-radius: 0.75vh;
@@ -316,7 +322,7 @@ body {
   position: relative;
   display: flex;
   justify-content: space-evenly;
-  background-color: white;
+  background-color: #ffffff;
 }
 
 .card.front p {
@@ -343,6 +349,43 @@ body {
 
 .card.front .bottom-right {
   flex-direction: column-reverse;
+}
+
+.card.back {
+  box-shadow: inset 0px 0px 0px 0.5vh #ffffff;
+}
+
+/* took inspiration from https://codepen.io/apo11oCreed/pen/WNEgJE */
+/* and https://gleam.run easter egg :sparkles: */
+.sparkle {
+  outline: 0.1vh solid #b5b5b5;
+  color: #000000;
+  background:
+    repeating-linear-gradient(40deg,
+      #ffd596 1em,
+      #ffd596 2em,
+      #fdffab 2em,
+      #fdffab 3em,
+      #c8ffa7 3em,
+      #c8ffa7 4em,
+      #9ce7ff 4em,
+      #9ce7ff 5em,
+      #dcd2fb 5em,
+      #dcd2fb 6em),
+    repeating-linear-gradient(-75deg,
+      #ffd596 1em,
+      #ffd596 2em,
+      #fdffab 2em,
+      #fdffab 3em,
+      #c8ffa7 3em,
+      #c8ffa7 4em,
+      #9ce7ff 4em,
+      #9ce7ff 5em,
+      #dcd2fb 5em,
+      #dcd2fb 6em);
+
+  background-blend-mode: multiply;
+
 }
 
 .draw-pile .card {
@@ -413,38 +456,6 @@ body {
 .draw-pile .card:nth-child(13) {
   bottom: 1.8vh;
   right: 1.8vh;
-}
-
-/* took inspiration from https://codepen.io/apo11oCreed/pen/WNEgJE */
-/* and https://gleam.run easter egg :sparkles: */
-.sparkle {
-  outline: 0.1vh solid #d070b8;
-  color: var(--not-black);
-  background:
-    repeating-linear-gradient(40deg,
-      #ffd596 1em,
-      #ffd596 2em,
-      #fdffab 2em,
-      #fdffab 3em,
-      #c8ffa7 3em,
-      #c8ffa7 4em,
-      #9ce7ff 4em,
-      #9ce7ff 5em,
-      #dcd2fb 5em,
-      #dcd2fb 6em),
-    repeating-linear-gradient(-75deg,
-      #ffd596 1em,
-      #ffd596 2em,
-      #fdffab 2em,
-      #fdffab 3em,
-      #c8ffa7 3em,
-      #c8ffa7 4em,
-      #9ce7ff 4em,
-      #9ce7ff 5em,
-      #dcd2fb 5em,
-      #dcd2fb 6em);
-
-  background-blend-mode: multiply;
 }
 
 

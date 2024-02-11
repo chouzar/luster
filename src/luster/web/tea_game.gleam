@@ -47,12 +47,15 @@ pub fn update(model: Model, message: Message) -> Model {
 pub fn view(model: Model, state: g.GameState) -> html.Node(a) {
   let phase = g.current_phase(state)
 
-  html.Fragment([game_info(state, model.alert), board(model, state)])
-  // TODO: Should be a section
-  //popup(phase == g.End, case model.toggle_scoring {
-  //  True -> end_game_scoring(state)
-  //  False -> html.Nothing
-  //}),
+  html.Fragment([
+    game_info(state, model.alert),
+    board(model, state),
+    // TODO: Should be a section
+    popup(phase == g.End, case model.toggle_scoring {
+      True -> end_game_scoring(state)
+      False -> html.Nothing
+    }),
+  ])
 }
 
 fn board(model: Model, state: g.GameState) -> html.Node(a) {
