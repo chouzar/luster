@@ -131,21 +131,22 @@ fn board(model: Model, state: g.GameState) -> html.Node(a) {
 }
 
 fn score_popup(model: Model, state: g.GameState) -> html.Node(a) {
-  let markup = case g.current_phase(state), model.toggle_scoring {
-    g.End, True -> {
-      scores(state)
+  case g.current_phase(state) {
+    g.End -> {
+      let dataset = dataset([#("event", encode_popup_toggle())])
+
+      html.section([attrs.class("popup column center"), ..dataset], [
+        case model.toggle_scoring {
+          True -> html.div([attrs.class("row center")], [scores(state)])
+          False -> html.Nothing
+        },
+      ])
     }
 
-    _phase, _toggle -> {
-      html.Fragment([])
+    _other -> {
+      html.Nothing
     }
   }
-
-  let dataset = dataset([#("event", encode_popup_toggle())])
-
-  html.section([attrs.class("popup column center"), ..dataset], [
-    html.div([attrs.class("row center")], [markup]),
-  ])
 }
 
 // --- View board segments --- //
