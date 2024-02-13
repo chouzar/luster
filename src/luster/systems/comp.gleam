@@ -77,7 +77,7 @@ fn handle_message(message: Message, state: State) -> Next(Message, State) {
         Error(Nil) -> Nil
       }
 
-      let _timer = process.send_after(state.self, between(50, 50), AssessMove)
+      let _timer = process.send_after(state.self, between(25, 25), AssessMove)
 
       Continue(state, None)
     }

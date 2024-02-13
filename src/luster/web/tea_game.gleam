@@ -9,7 +9,7 @@ import nakai/html
 import nakai/html/attrs
 
 // --- Elmish Game --- //
-
+// TODO: Reintegrate gamestate into model update
 pub type Message {
   SelectCard(g.Card)
   ToggleScoring
@@ -45,21 +45,57 @@ pub fn update(model: Model, message: Message) -> Model {
 }
 
 pub fn view(model: Model, state: g.GameState) -> html.Node(a) {
-  let phase = g.current_phase(state)
-
   html.Fragment([
-    game_info(state, model.alert),
+    game_info(state, model.selected_card, model.alert),
     board(model, state),
-    // TODO: Should be a section
-    popup(phase == g.End, case model.toggle_scoring {
-      True -> end_game_scoring(state)
-      False -> html.Nothing
-    }),
+    score_popup(model, state),
+  ])
+}
+
+fn game_info(
+  state: g.GameState,
+  selected_card: Option(g.Card),
+  alert: Option(g.Errors),
+) -> html.Node(a) {
+  let #(_color, message) = case alert {
+    Some(g.InvalidAction(_)) -> #("red", "Invalid Action.")
+    Some(g.NotCurrentPhase) -> #("yellow", "Not current phase.")
+    Some(g.NotCurrentPlayer) -> #("yellow", "Not current player.")
+    Some(g.NoCardInHand) -> #("yellow", "Card not in hand.")
+    Some(g.EmptyDeck) -> #("green", "Deck already empty.")
+    Some(g.MaxHandReached) -> #("green", "Hand at max.")
+    Some(g.NotClaimableSlot) -> #("green", "Slot is not claimable.")
+    Some(g.NotPlayableSlot) -> #("green", "Slot is not playable.")
+    None -> #("purple", "")
+  }
+
+  let action = case
+    g.current_turn(state),
+    g.current_phase(state),
+    selected_card
+  {
+    0, g.Draw, _selected -> "Initial Draw."
+    _, g.Draw, _selected -> "Draw a card from pile."
+    _, g.Play, Some(_) -> "Play a card from hand."
+    _, g.Play, None -> "Select a card from hand."
+    _, g.End, _ -> "Game!"
+  }
+
+  let player = case g.current_turn(state), g.current_player(state) {
+    0, _player -> ""
+    _, g.Player1 -> "Player 1,"
+    _, g.Player2 -> "Player 2,"
+  }
+
+  html.section([attrs.class("player-info column")], [
+    html.div([attrs.class("player row center ")], [
+      html.span_text([], message <> " " <> player <> " " <> action),
+    ]),
   ])
 }
 
 fn board(model: Model, state: g.GameState) -> html.Node(a) {
-  html.section([attrs.class("board row evenly")], [
+  html.section([attrs.class("play row evenly")], [
     html.div([attrs.class("column")], [
       html.div([attrs.class("s2")], []),
       html.div([attrs.class("s2 column center")], [deck(state, g.Player2)]),
@@ -68,7 +104,7 @@ fn board(model: Model, state: g.GameState) -> html.Node(a) {
     ]),
     html.div([attrs.class("column")], [
       html.div([attrs.class("s2")], []),
-      html.div([attrs.class("s8 row")], [
+      html.div([attrs.class("board s8 row")], [
         html.div([attrs.class("column center")], [
           view_score_columns(state, g.Player2),
         ]),
@@ -94,41 +130,25 @@ fn board(model: Model, state: g.GameState) -> html.Node(a) {
   ])
 }
 
-// --- View board segments --- //
+fn score_popup(model: Model, state: g.GameState) -> html.Node(a) {
+  let markup = case g.current_phase(state), model.toggle_scoring {
+    g.End, True -> {
+      scores(state)
+    }
 
-fn game_info(state: g.GameState, alert: Option(g.Errors)) -> html.Node(a) {
-  let #(color, message) = case alert {
-    Some(g.InvalidAction(_)) -> #("red", "Invalid Action")
-    Some(g.NotCurrentPhase) -> #("yellow", "Not current phase")
-    Some(g.NotCurrentPlayer) -> #("yellow", "Not current player")
-    Some(g.NoCardInHand) -> #("yellow", "Card not in hand")
-    Some(g.EmptyDeck) -> #("green", "Deck already empty")
-    Some(g.MaxHandReached) -> #("green", "Hand at max")
-    Some(g.NotClaimableSlot) -> #("green", "Slot is not claimable")
-    Some(g.NotPlayableSlot) -> #("green", "Slot is not playable")
-    None -> #("purple", "")
+    _phase, _toggle -> {
+      html.Fragment([])
+    }
   }
 
-  let phase = case g.current_turn(state), g.current_phase(state) {
-    0, g.Draw -> "Initial Draw"
-    _, g.Draw -> "Draw Card Phase"
-    _, g.Play -> "Play Card Phase"
-    _, g.End -> "Game!"
-  }
+  let dataset = dataset([#("event", encode_popup_toggle())])
 
-  let player = case g.current_player(state) {
-    g.Player1 -> "P1 Turn"
-    g.Player2 -> "P2 Turn"
-  }
-
-  html.section([attrs.class("player-info")], [
-    html.div([attrs.class("player")], [html.span_text([], player)]),
-    html.div([attrs.class("status")], [
-      html.div([attrs.class("action")], [html.span_text([], phase)]),
-      html.div([attrs.class("alert " <> color)], [html.span_text([], message)]),
-    ]),
+  html.section([attrs.class("popup column center"), ..dataset], [
+    html.div([attrs.class("row center")], [markup]),
   ])
 }
+
+// --- View board segments --- //
 
 fn deck(state: g.GameState, player: g.Player) -> html.Node(a) {
   let size = g.deck_size(state)
@@ -322,7 +342,7 @@ type ScoreGroup {
   )
 }
 
-fn end_game_scoring(state: g.GameState) -> html.Node(a) {
+fn scores(state: g.GameState) -> html.Node(a) {
   let scores = g.score_columns(state)
   let total = g.score_total(state)
 
@@ -380,7 +400,7 @@ fn end_game_scoring(state: g.GameState) -> html.Node(a) {
   let p2_form_total = list.fold(p2_scores, 0, sum_form)
   let p2_flank_total = list.fold(p2_scores, 0, sum_flank)
 
-  html.div([attrs.class("sparkle")], [
+  html.div([attrs.class("final-score sparkle")], [
     html.Fragment([
       html.div([attrs.class("score-winner")], [html.h1_text([], "Game!")]),
       html.div([attrs.class("score-group")], [
@@ -454,15 +474,15 @@ fn subtotals_table(card: Int, formation: Int, flank: Int) -> html.Node(a) {
   html.table([], [
     html.tbody([], [
       html.tr([], [
-        html.td_text([], "Point distribution"),
+        html.td_text([], "Card points"),
         html.td_text([], int.to_string(card)),
       ]),
       html.tr([], [
-        html.td_text([], "Formation"),
+        html.td_text([], "Formation points"),
         html.td_text([], int.to_string(formation)),
       ]),
       html.tr([], [
-        html.td_text([], "Flank"),
+        html.td_text([], "Flank points"),
         html.td_text([], int.to_string(flank)),
       ]),
     ]),
@@ -491,17 +511,6 @@ fn winner(total: #(Option(g.Player), Int)) -> html.Node(a) {
     html.h2_text([], total.0),
     html.h3_text([], total.1),
   ])
-}
-
-fn popup(display: Bool, markup: html.Node(a)) -> html.Node(a) {
-  case display {
-    True ->
-      click(
-        [#("event", encode_popup_toggle())],
-        html.div([attrs.class("popup")], [markup]),
-      )
-    False -> html.Nothing
-  }
 }
 
 // --- View HTML Helpers --- //

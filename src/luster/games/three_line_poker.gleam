@@ -9,23 +9,23 @@ pub const max_hand_size = 8
 
 pub const plays_per_turn = 4
 
-const straight_flush = 19
+const ranks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+
+const suits = [Spade, Heart, Diamond, Club]
+
+const straight_flush = 23
 
 const three_of_a_kind = 17
 
-const straight = 7
+const straight = 11
 
 const flush = 5
 
 const pair = 3
 
-const flank_bonus = 5
-
 const highcard = 0
 
-const ranks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-
-const suits = [Spade, Heart, Diamond, Club]
+const flank_bonus = 5
 
 pub type Message {
   DrawCard(player: Player)
