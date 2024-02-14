@@ -1,7 +1,7 @@
 const session = document.querySelector("meta[name='session']").content;
 const body = document.querySelector("body");
 
-const socket = new WebSocket("wss://192.168.0.100:4444/events/" + session);
+const socket = new WebSocket("wss://localhost:4444/events/" + session);
 
 
 socket.onmessage = (event) => {

@@ -39,7 +39,7 @@ pub fn router(
 
     http.Post, ["battleline"] -> {
       let assert Ok(#(id, subject)) = sessions.create(store)
-      //let assert Ok(_comp_1) = comp.start(tlp.Player1, id, subject, pubsub)
+      let assert Ok(_comp_1) = comp.start(tlp.Player1, id, subject, pubsub)
       let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
 
       redirect("/")

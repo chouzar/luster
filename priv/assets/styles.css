@@ -1,19 +1,13 @@
-/* TODO: Adapt exceeding 7.5 vh slots to mobile */
-
-.lobby-games {
-  list-style: none;
-}
-
-/* This is what makes the click through elements work */
+/* Page level styles */
 
 *[data-event]>* {
+  /* This is what makes the click through elements work */
   pointer-events: none;
 }
 
-/* Page level styles */
 
 :root {
-  /* Scores totals */
+  /* TODO: Scores totals */
   --dark-blue: #4483d5ab;
   --dark-red: #d544a3ab;
 
@@ -34,7 +28,33 @@ body {
   background-color: var(--light-pine-green);
 }
 
-/* Layout and sections */
+/* Home page */
+
+.lobby .control-panel {
+}
+
+.lobby .games {
+}
+
+.lobby .dashboard-card {
+  width: 23%;
+  height: 20vh;
+  padding: 1%;
+  font-size: 1.5em;
+  text-align: center;
+  font-family: sans-serif;
+}
+
+
+.lobby .dashboard-card .link {
+}
+
+.lobby .dashboard-card .preview {
+  height: 80%;
+  padding: 1vh;
+}
+
+/* Game page */
 
 .player-info {
   font-family: sans-serif;
@@ -130,6 +150,7 @@ body {
   flex-direction: row;
 }
 
+/* TODO: Adapt exceeding 7.5 vh slots to mobile */
 .scores>.score {
   height: 2vh;
   width: 7.5vh;
@@ -180,6 +201,7 @@ body {
   flex-direction: row;
 }
 
+/* TODO: Adapt exceeding 7.5 vh slots to mobile */
 .slots .slot {
   outline: 0.2vh solid var(--gold);
   position: relative;
@@ -192,6 +214,7 @@ body {
 
 /* Individual Elements */
 
+/* TODO: Adapt exceeding 7.5 vh slots to mobile */
 .draw-pile {
   position: relative;
   height: 10.5vh;
@@ -226,6 +249,7 @@ body {
   top: 8.1vh;
 }
 
+/* TODO: Adapt exceeding 7.5 vh slots to mobile */
 .card {
   /* standard size card 3.5in by 2.5in */
   outline: 0.1vh solid #b5b5b5;
@@ -408,6 +432,10 @@ body {
 
 .center {
   justify-content: center;
+}
+
+.wrap {
+  flex-wrap: wrap;
 }
 
 .s1 {
