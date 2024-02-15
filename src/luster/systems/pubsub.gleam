@@ -1,7 +1,7 @@
+import chip
 import gleam/erlang/process
 import gleam/list
 import gleam/otp/actor
-import chip
 
 pub type PubSub(channel, message) =
   process.Subject(chip.Message(channel, message))

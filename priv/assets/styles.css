@@ -7,46 +7,34 @@
 
 
 :root {
-  /* TODO: Scores totals */
-  --dark-blue: #4483d5ab;
-  --dark-red: #d544a3ab;
-
-  --font-bonus-formation: #4d8848;
-  --font-bonus-flank: #4f40ffc9;
-  
-  --green: #e5fbcc;
-  --yellow: #f0f2b7f0;
-
   --gold: #ac9100;
-  --light-pine-green: #f1f3e5;
-  --dark-pine-green: #456d69;
+  --shiny-gold: gold;
+  /*--light: #ffaff3;
+  --dark: #2f2f2f;*/
+  --light: #f1f3e5;
+  --dark: #456d69;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--light-pine-green);
+  background-color: var(--light);
 }
 
 /* Home page */
 
 .lobby .control-panel {
-}
-
-.lobby .games {
+  height: 5vh;
 }
 
 .lobby .dashboard-card {
-  width: 23%;
-  height: 20vh;
-  padding: 1%;
+  width: 25%;
+  height: 25vh;
+  padding-top: 1vh;
+  padding-bottom: 1vh;
   font-size: 1.5em;
   text-align: center;
   font-family: sans-serif;
-}
-
-
-.lobby .dashboard-card .link {
 }
 
 .lobby .dashboard-card .preview {
@@ -67,7 +55,7 @@ body {
 }
 
 .board {
-  background-color: var(--dark-pine-green);
+  background-color: var(--dark);
   border-radius: 2vh;
   padding: 2vh;
 }
@@ -115,7 +103,7 @@ body {
   display: flex;
   font-size: 2.25vh;
   padding: 2vh 0 2vh 0;
-  background-color: var(--yellow);
+  background-color: var(--light);
 }
 
 .final-score .score-group>div {
@@ -123,7 +111,7 @@ body {
 }
 
 .final-score .score-group table {
- width: 100%; 
+  width: 100%;
 }
 
 .final-score .score-group table td {
@@ -154,7 +142,7 @@ body {
 .scores>.score {
   height: 2vh;
   width: 7.5vh;
-
+  color: var(--light);
   border-radius: 0.25vh;
   margin: 0.32vh;
   padding: 0.4vh;
@@ -172,29 +160,24 @@ body {
 }
 
 .scores.totals>.score.player-1 {
-  outline: 0.3vh solid var(--dark-blue);
+  outline: 0.1vh solid var(--dark);
+  background-color: var(--light);
+  color: var(--dark);
 }
 
 .scores.totals>.score.player-2 {
-  outline: 0.3vh solid var(--dark-red);
-}
-
-.scores>.score.player-1 {
-  color: var(--font-blue);
-}
-
-.scores>.score.player-2 {
-  color: var(--font-red);
+  outline: 0.1vh solid var(--light);
+  background-color: var(--dark);
+  color: var(--light);
 }
 
 .scores>.score>.formation {
-  color: var(--font-bonus-formation);
+  color: var(--gold);
 }
 
 .scores>.score>.flank {
-  color: var(--font-bonus-flank);
+  color: var(--shiny-gold);
 }
-
 
 .slots {
   display: flex;
@@ -317,31 +300,19 @@ body {
   outline: 0.1vh solid #b5b5b5;
   color: #000000;
   background:
-    repeating-linear-gradient(40deg,
-      #ffd596 1em,
+    repeating-linear-gradient(-30deg,
+      #f9b1be 1em,
+      #f9b1be 2em,
       #ffd596 2em,
-      #fdffab 2em,
+      #ffd596 3em,
       #fdffab 3em,
-      #c8ffa7 3em,
+      #fdffab 4em,
       #c8ffa7 4em,
-      #9ce7ff 4em,
+      #c8ffa7 5em,
       #9ce7ff 5em,
-      #dcd2fb 5em,
-      #dcd2fb 6em),
-    repeating-linear-gradient(-75deg,
-      #ffd596 1em,
-      #ffd596 2em,
-      #fdffab 2em,
-      #fdffab 3em,
-      #c8ffa7 3em,
-      #c8ffa7 4em,
-      #9ce7ff 4em,
-      #9ce7ff 5em,
-      #dcd2fb 5em,
-      #dcd2fb 6em);
-
-  background-blend-mode: multiply;
-
+      #9ce7ff 6em,
+      #dcd2fb 6em,
+      #dcd2fb 7em);
 }
 
 .draw-pile .card {

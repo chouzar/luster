@@ -138,7 +138,7 @@ pub fn new() -> GameState {
     turn: 0,
     phase: Draw,
     board: new_board(),
-    sequence: list.shuffle([Player1, Player2]),
+    sequence: [Player1, Player2],
     total_score: new_total_score(),
   )
 }

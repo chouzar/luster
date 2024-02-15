@@ -5,14 +5,15 @@ import gleam/http
 import gleam/http/request
 import gleam/http/response
 import gleam/int
+import gleam/iterator
 import gleam/list
 import gleam/string
 import gleam/uri
+import luster/games/three_line_poker as tlp
 import luster/systems/comp
+import luster/systems/pubsub
 import luster/systems/session
 import luster/systems/sessions
-import luster/systems/pubsub
-import luster/games/three_line_poker as tlp
 import luster/web/socket
 import luster/web/tea_game
 import luster/web/tea_home
@@ -38,9 +39,9 @@ pub fn router(
     }
 
     http.Post, ["battleline"] -> {
-      let assert Ok(#(id, subject)) = sessions.create(store)
-      let assert Ok(_comp_1) = comp.start(tlp.Player1, id, subject, pubsub)
-      let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
+      request
+      |> process_form()
+      |> create_games(store, pubsub)
 
       redirect("/")
     }
@@ -105,6 +106,42 @@ fn layout(session: String, body: html.Node(a)) -> html.Node(a) {
   ])
 }
 
+fn create_games(
+  params: List(#(String, String)),
+  store: sessions.Store,
+  pubsub: pubsub.PubSub(Int, socket.Message),
+) {
+  let #(quantity, rest) = case params {
+    [#("quantity", qty), ..rest] ->
+      case int.parse(qty) {
+        Ok(qty) -> #(qty, rest)
+        Error(_) -> #(1, rest)
+      }
+    _other -> #(1, [])
+  }
+
+  let game_mode = case rest {
+    [#("PlayerVsPlayer", _)] -> fn(_) {
+      let assert Ok(#(_id, _subject)) = sessions.create(store)
+      Nil
+    }
+    [#("PlayerVsComp", _)] -> fn(_) {
+      let assert Ok(#(id, subject)) = sessions.create(store)
+      let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
+      Nil
+    }
+    [#("CompVsComp", _)] | _other -> fn(_) {
+      let assert Ok(#(id, subject)) = sessions.create(store)
+      let assert Ok(_comp_1) = comp.start(tlp.Player1, id, subject, pubsub)
+      let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
+      Nil
+    }
+  }
+
+  iterator.range(from: 1, to: quantity)
+  |> iterator.each(game_mode)
+}
+
 // https://www.iana.org/assignments/media-types/media-types.xhtml
 type MIME {
   HTML
@@ -162,7 +199,7 @@ fn serve_assets(
   }
 }
 
-pub fn process_form(
+fn process_form(
   request: request.Request(mist.Connection),
 ) -> List(#(String, String)) {
   let assert Ok(request) = mist.read_body(request, 10_000)

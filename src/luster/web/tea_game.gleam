@@ -1,5 +1,5 @@
-import gleam/int
 import gleam/bit_array
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/pair
@@ -9,7 +9,7 @@ import nakai/html
 import nakai/html/attrs
 
 // --- Elmish Game --- //
-// TODO: Reintegrate gamestate into model update
+// TODO: For better errors. Reintegrate gamestate into model update
 pub type Message {
   SelectCard(g.Card)
   ToggleScoring
@@ -58,7 +58,7 @@ fn game_info(
   alert: Option(g.Errors),
 ) -> html.Node(a) {
   let #(_color, message) = case alert {
-    Some(g.InvalidAction(_)) -> #("red", "Invalid Action.")
+    Some(g.InvalidAction(_action)) -> #("red", "Invalid Action.")
     Some(g.NotCurrentPhase) -> #("yellow", "Not current phase.")
     Some(g.NotCurrentPlayer) -> #("yellow", "Not current player.")
     Some(g.NoCardInHand) -> #("yellow", "Card not in hand.")
@@ -81,13 +81,18 @@ fn game_info(
     _, g.End, _ -> "Game!"
   }
 
-  let player = case g.current_turn(state), g.current_player(state) {
-    0, _player -> ""
-    _, g.Player1 -> "Player 1,"
-    _, g.Player2 -> "Player 2,"
+  let player = case
+    g.current_turn(state),
+    g.current_phase(state),
+    g.current_player(state)
+  {
+    0, _phase, _player -> ""
+    _, g.End, _player -> ""
+    _, _phase, g.Player1 -> "Player 1,"
+    _, _phase, g.Player2 -> "Player 2,"
   }
 
-  html.section([attrs.class("player-info column")], [
+  html.section([attrs.class("player-info column center")], [
     html.div([attrs.class("player row center ")], [
       html.span_text([], message <> " " <> player <> " " <> action),
     ]),
@@ -510,7 +515,7 @@ fn winner(total: #(Option(g.Player), Int)) -> html.Node(a) {
 
   html.div([attrs.class("score-winner")], [
     html.h2_text([], total.0),
-    html.h3_text([], total.1),
+    html.h3_text([], total.1 <> " points"),
   ])
 }
 

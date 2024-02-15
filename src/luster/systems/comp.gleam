@@ -2,14 +2,14 @@ import gleam/erlang/process.{type Subject, Normal}
 import gleam/float
 import gleam/function.{identity}
 import gleam/int
-import gleam/option.{None}
 import gleam/list
+import gleam/option.{None}
 import gleam/otp/actor.{
   type InitResult, type Next, type StartError, Continue, Ready, Spec, Stop,
 }
 import luster/games/three_line_poker as g
-import luster/systems/session
 import luster/systems/pubsub.{type PubSub}
+import luster/systems/session
 import luster/web/socket
 
 pub type Message {
@@ -77,8 +77,7 @@ fn handle_message(message: Message, state: State) -> Next(Message, State) {
         Error(Nil) -> Nil
       }
 
-      let _timer =
-        process.send_after(state.self, between(500, 1000), AssessMove)
+      let _timer = process.send_after(state.self, between(300, 300), AssessMove)
 
       Continue(state, None)
     }

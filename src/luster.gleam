@@ -6,9 +6,6 @@ import luster/systems/pubsub
 import luster/systems/sessions
 import luster/web
 import mist
-import gleam/iterator
-import luster/systems/comp
-import luster/games/three_line_poker as tlp
 
 // TODO: Add a proper supervision tree
 //assert Ok(subject) =
@@ -47,7 +44,6 @@ pub fn main() -> Nil {
       keyfile: env("LUSTER_KEY"),
     )
 
-  create_games(store, pubsub)
   process.sleep_forever()
 }
 
@@ -57,25 +53,17 @@ fn env(key: String) -> String {
     Error(Nil) -> panic as "unable to find ENV"
   }
 }
-
-fn create_games(store, pubsub) {
-  iterator.range(from: 1, to: 100)
-  |> iterator.each(fn(_) {
-    let assert Ok(#(id, subject)) = sessions.create(store)
-    let assert Ok(_comp_1) = comp.start(tlp.Player1, id, subject, pubsub)
-    let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
-  })
-}
 // --- Helpers --- //
 
 //const adjectives = [
 //  "salty", "brief", "noble", "glorious", "respectful", "tainted", "measurable",
 //  "constant", "fake", "lighting", "cool", "sparkling", "painful", "superperfect",
+//  "mighty"
 //]
 //
 //const subjects = [
 //  "poker", "party", "battle", "danceoff", "bakeoff", "marathon", "club", "game",
-//  "match", "rounds",
+//  "match", "rounds", 
 //]
 //
 //fn generate_name() -> String {

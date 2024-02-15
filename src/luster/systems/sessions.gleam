@@ -1,9 +1,9 @@
+import chip
 import gleam/erlang/process.{type Subject}
 import gleam/int
 import gleam/list
 import gleam/otp/actor.{type StartError}
 import luster/systems/session
-import chip
 
 pub type Store =
   process.Subject(chip.Message(Int, session.Message))
