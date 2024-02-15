@@ -9,10 +9,14 @@
 :root {
   --gold: #ac9100;
   --shiny-gold: gold;
-  /*--light: #ffaff3;
-  --dark: #2f2f2f;*/
+  --light: #ffaff3;
+  --dark: #2f2f2f;
   --light: #f1f3e5;
   --dark: #456d69;
+  --gold: #ac7f00;
+  --shiny-gold: #d39704;
+  --light: #ecede6;
+  --dark: #5c4255;
 }
 
 body {
