@@ -9,6 +9,11 @@ if (session) {
     body.innerHTML = html
   };
 
+  socket.onclose = (event) => {
+    console.log("disconnected cause server halted");
+    // TODO: reload page here
+  };
+
   window.addEventListener('click', (event) => {
     if (event.target.dataset.event) {
       socket.send(new Blob([event.target.dataset.event]));

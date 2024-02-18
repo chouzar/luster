@@ -19,8 +19,9 @@ import mist.{
 import nakai
 
 pub type Message {
-  UpdateGameState
-  Close
+  Update(tea.Message)
+  Cleanup
+  Halt
 }
 
 pub type Action {
@@ -30,6 +31,7 @@ pub type Action {
 
 pub opaque type State {
   State(
+    self: Subject(Message),
     session_id: Int,
     session: Subject(session.Message),
     pubsub: PubSub(Int, Message),
@@ -57,22 +59,32 @@ fn build_init(
   session: Subject(session.Message),
   pubsub: PubSub(Int, Message),
 ) -> #(State, Option(Selector(Message))) {
+  // Register an internal subject to send messages to itself
   let self = process.new_subject()
   pubsub.register(pubsub, session_id, self)
-  let model = tea.init()
+
+  // Initialize a live TEA-like model for the socket
+  let model = tea.init(session.gamestate(session))
+
+  // Monitor the session process so we can track if it goes down
+  let monitor =
+    session
+    |> process.subject_owner()
+    |> process.monitor_process()
 
   #(
-    State(session_id, session, pubsub, model),
+    State(self, session_id, session, pubsub, model),
     Some(
       process.new_selector()
-      |> process.selecting(self, identity),
+      |> process.selecting(self, identity)
+      |> process.selecting_process_down(monitor, fn(_down) { Cleanup }),
     ),
   )
 }
 
 fn on_close(state: State) -> Nil {
   let session_id = int.to_string(state.session_id)
-  io.println("closing a connection for session: " <> session_id)
+  io.println("closing socket connection for session: " <> session_id)
   Nil
 }
 
@@ -85,19 +97,10 @@ fn handle_message(
     Binary(bits) -> {
       case parse_message(bits) {
         Ok(action) -> {
-          let model = case action {
-            Play(message) ->
-              case session.next(state.session, message) {
-                Ok(_gamestate) -> state.model
-                Error(error) -> tea.update(state.model, tea.Alert(error))
-              }
+          state.session
+          |> build_message(action)
+          |> broadcast_message(state, _)
 
-            Select(message) -> tea.update(state.model, message)
-          }
-
-          pubsub.broadcast(state.pubsub, state.session_id, UpdateGameState)
-
-          let state = State(..state, model: model)
           Continue(state, None)
         }
 
@@ -109,18 +112,26 @@ fn handle_message(
       }
     }
 
-    Custom(UpdateGameState) -> {
-      let gamestate = session.gamestate(state.session)
-
+    Custom(Update(message)) -> {
       state.model
-      |> tea.view(gamestate)
+      |> tea.update(message)
+      |> tea.view()
       |> nakai.to_inline_string()
       |> tap(mist.send_text_frame(conn, _))
 
       Continue(state, None)
     }
 
-    Custom(Close) -> {
+    Custom(Cleanup) -> {
+      // Last update is still enqueued, this is a buffer to allow
+      // this socket to go through remaining messages.
+      let id = int.to_string(state.session_id)
+      io.println("cleanup socket state for session " <> id)
+      process.send_after(state.self, 5000, Halt)
+      Continue(state, None)
+    }
+
+    Custom(Halt) -> {
       Stop(Normal)
     }
 
@@ -131,6 +142,38 @@ fn handle_message(
 
     Closed | Shutdown -> {
       Stop(Normal)
+    }
+  }
+}
+
+fn build_message(
+  session: Subject(session.Message),
+  action: Action,
+) -> tea.Message {
+  case action {
+    Play(message) -> {
+      case session.next(session, message) {
+        Ok(gamestate) -> tea.UpdateGame(gamestate)
+        Error(error) -> tea.Alert(error)
+      }
+    }
+
+    Select(message) -> {
+      message
+    }
+  }
+}
+
+fn broadcast_message(state: State, message: tea.Message) -> Nil {
+  case message {
+    tea.UpdateGame(_) as message -> {
+      // When gamestate is updated broadcast it to all sockets
+      pubsub.broadcast(state.pubsub, state.session_id, Update(message))
+    }
+
+    message -> {
+      // When UI is updated only this socket needs to know
+      process.send(state.self, Update(message))
     }
   }
 }

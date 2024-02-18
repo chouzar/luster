@@ -14,6 +14,7 @@ pub type Message {
   SelectCard(g.Card)
   ToggleScoring
   Alert(g.Errors)
+  UpdateGame(g.GameState)
 }
 
 pub type Model {
@@ -21,11 +22,17 @@ pub type Model {
     alert: Option(g.Errors),
     selected_card: Option(g.Card),
     toggle_scoring: Bool,
+    gamestate: g.GameState,
   )
 }
 
-pub fn init() -> Model {
-  Model(alert: None, selected_card: None, toggle_scoring: True)
+pub fn init(gamestate: g.GameState) -> Model {
+  Model(
+    alert: None,
+    selected_card: None,
+    toggle_scoring: True,
+    gamestate: gamestate,
+  )
 }
 
 pub fn update(model: Model, message: Message) -> Model {
@@ -41,14 +48,18 @@ pub fn update(model: Model, message: Message) -> Model {
     Alert(error) -> {
       Model(..model, alert: Some(error))
     }
+
+    UpdateGame(gamestate) -> {
+      Model(..model, gamestate: gamestate)
+    }
   }
 }
 
-pub fn view(model: Model, state: g.GameState) -> html.Node(a) {
+pub fn view(model: Model) -> html.Node(a) {
   html.Fragment([
-    game_info(state, model.selected_card, model.alert),
-    board(model, state),
-    score_popup(model, state),
+    game_info(model.gamestate, model.selected_card, model.alert),
+    board(model.gamestate, model.selected_card),
+    score_popup(model.gamestate, model.toggle_scoring),
   ])
 }
 
@@ -99,7 +110,7 @@ fn game_info(
   ])
 }
 
-fn board(model: Model, state: g.GameState) -> html.Node(a) {
+fn board(state: g.GameState, selected_card: Option(g.Card)) -> html.Node(a) {
   html.section([attrs.class("play row evenly")], [
     html.div([attrs.class("column")], [
       html.div([attrs.class("s2")], []),
@@ -114,11 +125,11 @@ fn board(model: Model, state: g.GameState) -> html.Node(a) {
           view_score_columns(state, g.Player2),
         ]),
         html.div([attrs.class("column center")], [
-          view_slots(state, g.Player2, model.selected_card),
+          view_slots(state, g.Player2, selected_card),
         ]),
         html.div([attrs.class("column center")], [view_score_totals(state)]),
         html.div([attrs.class("column center")], [
-          view_slots(state, g.Player1, model.selected_card),
+          view_slots(state, g.Player1, selected_card),
         ]),
         html.div([attrs.class("column center")], [
           view_score_columns(state, g.Player1),
@@ -135,13 +146,13 @@ fn board(model: Model, state: g.GameState) -> html.Node(a) {
   ])
 }
 
-fn score_popup(model: Model, state: g.GameState) -> html.Node(a) {
+fn score_popup(state: g.GameState, toggle_scoring: Bool) -> html.Node(a) {
   case g.current_phase(state) {
     g.End -> {
       let dataset = dataset([#("event", encode_popup_toggle())])
 
       html.section([attrs.class("popup column center"), ..dataset], [
-        case model.toggle_scoring {
+        case toggle_scoring {
           True -> html.div([attrs.class("row center")], [scores(state)])
           False -> html.Nothing
         },

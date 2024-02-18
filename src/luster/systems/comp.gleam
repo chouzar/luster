@@ -1,16 +1,19 @@
 import gleam/erlang/process.{type Subject, Normal}
 import gleam/float
 import gleam/function.{identity}
+import gleam/io
 import gleam/int
 import gleam/list
 import gleam/option.{None}
 import gleam/otp/actor.{
   type InitResult, type Next, type StartError, Continue, Ready, Spec, Stop,
 }
+import gleam/result.{try}
 import luster/games/three_line_poker as g
 import luster/systems/pubsub.{type PubSub}
 import luster/systems/session
 import luster/web/socket
+import luster/web/tea_game as tea
 
 pub type Message {
   AssessMove
@@ -50,69 +53,91 @@ fn handle_init(
 
   process.send(self, AssessMove)
 
+  let monitor =
+    session
+    |> process.subject_owner()
+    |> process.monitor_process()
+
   Ready(
     State(self, session_id, player, session, pubsub),
     process.new_selector()
-    |> process.selecting(self, identity),
+    |> process.selecting(self, identity)
+    |> process.selecting_process_down(monitor, fn(_down) { Halt }),
   )
 }
 
 fn handle_message(message: Message, state: State) -> Next(Message, State) {
   case message {
     AssessMove -> {
-      let gamestate = session.gamestate(state.session)
-
-      case assess_move(state.player, gamestate) {
-        Ok(message) ->
-          case session.next(state.session, message) {
-            Ok(_gamestate) ->
-              pubsub.broadcast(
-                state.pubsub,
-                state.session_id,
-                socket.UpdateGameState,
-              )
-            Error(_) -> Nil
-          }
-
-        Error(Nil) -> Nil
+      let _ = {
+        let gamestate = session.gamestate(state.session)
+        use message <- try(assess_move(gamestate, state.player))
+        broadcast_message(state, message)
+        Ok(Nil)
       }
 
-      let _timer = process.send_after(state.self, between(300, 300), AssessMove)
+      let _timer = process.send_after(state.self, between(50, 50), AssessMove)
 
       Continue(state, None)
     }
 
     Halt -> {
+      let id = int.to_string(state.session_id)
+      let player = case state.player {
+        g.Player1 -> "player 1"
+        g.Player2 -> "player 2"
+      }
+
+      io.println("halting computer " <> player <> " for session " <> id)
       Stop(Normal)
     }
   }
 }
 
+fn broadcast_message(state: State, message: g.Message) -> Nil {
+  case session.next(state.session, message) {
+    Ok(gamestate) -> {
+      let message = tea.UpdateGame(gamestate)
+
+      pubsub.broadcast(state.pubsub, state.session_id, socket.Update(message))
+    }
+
+    Error(_) -> {
+      Nil
+    }
+  }
+}
+
 fn assess_move(
-  player: g.Player,
   gamestate: g.GameState,
+  player: g.Player,
 ) -> Result(g.Message, Nil) {
   let hand = g.player_hand(gamestate, player)
   let slots = g.available_plays(gamestate, player)
+  let phase = g.current_phase(gamestate)
 
-  case list.length(hand), g.current_player(gamestate) {
-    size, current if size == g.max_hand_size && current == player -> {
-      Ok(play_card(player, slots, hand))
-    }
-
-    size, current if size == g.max_hand_size && current != player -> {
+  case phase, list.length(hand), g.current_player(gamestate) {
+    g.End, _size, _player -> {
       Error(Nil)
     }
 
-    _size, current if current != player -> {
+    _phase, size, current if size == g.max_hand_size && current == player -> {
+      Ok(play_card(player, slots, hand))
+    }
+
+    _phase, size, current if size == g.max_hand_size && current != player -> {
+      Error(Nil)
+    }
+
+    _phase, _size, current if current != player -> {
       Ok(draw_card(player))
     }
 
-    0, _player -> {
+    _phase, 0, _player -> {
       Ok(draw_card(player))
     }
 
-    _size, player -> {
+    _phase, _size, player -> {
       let assert Ok(move) =
         [play_card(player, slots, hand), draw_card(player)]
         |> list.shuffle()

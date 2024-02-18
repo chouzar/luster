@@ -1,4 +1,5 @@
-import gleam/erlang/process.{type ExitReason, type Subject, Normal}
+import gleam/erlang/process.{type Subject, Normal}
+import gleam/function.{identity, tap}
 import gleam/option.{None}
 import gleam/otp/actor.{
   type InitResult, type Next, type StartError, Continue, Ready, Spec, Stop,
@@ -6,7 +7,7 @@ import gleam/otp/actor.{
 import luster/games/three_line_poker as g
 
 type State {
-  State(gamestate: g.GameState)
+  State(self: Subject(Message), gamestate: g.GameState)
 }
 
 pub fn start() -> Result(Subject(Message), StartError) {
@@ -28,19 +29,21 @@ pub fn gamestate(session: Subject(Message)) -> g.GameState {
   actor.call(session, GameState(_), 100)
 }
 
-pub fn stop(session: Subject(Message)) -> ExitReason {
-  actor.call(session, Halt(_), 100)
-}
-
 pub opaque type Message {
   GameState(caller: Subject(g.GameState))
   Next(caller: Subject(Result(g.GameState, g.Errors)), g.Message)
-  Halt(caller: Subject(ExitReason))
+  Halt
 }
 
 fn handle_init() -> InitResult(State, Message) {
   let gamestate = g.new()
-  Ready(State(gamestate), process.new_selector())
+  let self = process.new_subject()
+
+  Ready(
+    State(self, gamestate),
+    process.new_selector()
+    |> process.selecting(self, identity),
+  )
 }
 
 fn handle_message(message: Message, state: State) -> Next(Message, State) {
@@ -51,22 +54,25 @@ fn handle_message(message: Message, state: State) -> Next(Message, State) {
     }
 
     Next(caller, message) -> {
-      case g.next(state.gamestate, message) {
-        Ok(gamestate) -> {
-          let _ = process.send(caller, Ok(gamestate))
-          let state = State(gamestate)
-          Continue(state, None)
-        }
+      let result =
+        state.gamestate
+        |> g.next(message)
+        |> tap(process.send(caller, _))
 
-        Error(error) -> {
-          let _ = process.send(caller, Error(error))
-          Continue(state, None)
-        }
+      let gamestate = case result {
+        Ok(gamestate) -> gamestate
+        Error(_) -> state.gamestate
       }
+
+      case g.current_phase(gamestate) {
+        g.End -> process.send(state.self, Halt)
+        _ -> Nil
+      }
+
+      Continue(State(..state, gamestate: gamestate), None)
     }
 
-    Halt(caller) -> {
-      process.send(caller, Normal)
+    Halt -> {
       Stop(Normal)
     }
   }

@@ -51,8 +51,8 @@ pub fn router(
 
       case sessions.one(store, id) {
         Ok(subject) ->
-          tea_game.init()
-          |> tea_game.view(session.gamestate(subject))
+          tea_game.init(session.gamestate(subject))
+          |> tea_game.view()
           |> render(with: fn(body) { layout(session_id, body) })
 
         Error(Nil) -> redirect("/")
