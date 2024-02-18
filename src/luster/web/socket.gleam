@@ -59,8 +59,10 @@ fn build_init(
   session: Subject(session.Message),
   pubsub: PubSub(Int, Message),
 ) -> #(State, Option(Selector(Message))) {
-  // Register an internal subject to send messages to itself
+  // Create an internal subject to send messages to itself
   let self = process.new_subject()
+
+  // Register the subject to broacast messages across sockets
   pubsub.register(pubsub, session_id, self)
 
   // Initialize a live TEA-like model for the socket
@@ -72,6 +74,7 @@ fn build_init(
     |> process.subject_owner()
     |> process.monitor_process()
 
+  // Initialize state and enable selectors for self ref and the monitor ref
   #(
     State(self, session_id, session, pubsub, model),
     Some(
@@ -124,8 +127,9 @@ fn handle_message(
     }
 
     Custom(Cleanup) -> {
-      // Last update is still enqueued, this is a buffer to allow
-      // this socket to go through remaining messages.
+      // At this point, last update messages are still being broadcasted/enqueued in
+      // the socket mailbox. This works as a kind of buffer to let them being  
+      // processed before shutdown. 
       let id = int.to_string(state.session_id)
       io.println("cleanup socket state for session " <> id)
       process.send_after(state.self, 5000, Halt)
@@ -133,6 +137,7 @@ fn handle_message(
     }
 
     Custom(Halt) -> {
+      // Now stop the socket for real.
       Stop(Normal)
     }
 
@@ -178,6 +183,8 @@ fn broadcast_message(state: State, message: tea.Message) -> Nil {
     }
   }
 }
+
+// --- Decoders for incoming messages --- //
 
 fn parse_message(bits: BitArray) -> Result(Action, Nil) {
   case bits {

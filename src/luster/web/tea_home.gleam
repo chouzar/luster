@@ -4,7 +4,7 @@ import luster/games/three_line_poker as g
 import nakai/html
 import nakai/html/attrs
 
-// --- Elmish Lobby --- //
+// --- Elm-ish architecture with a Model and View callback --- //
 
 pub type Model {
   Model(games: List(#(Int, g.GameState)))
@@ -29,6 +29,8 @@ pub fn view(model: Model) -> html.Node(a) {
     html.div([attrs.class("games column wrap")], cards),
   ])
 }
+
+// --- Helpers to build the view  --- //
 
 fn create_game_form(mode: GameMode, text: String) -> html.Node(a) {
   html.form([attrs.method("post"), attrs.action("/battleline")], [

@@ -8,8 +8,8 @@ import luster/games/three_line_poker as g
 import nakai/html
 import nakai/html/attrs
 
-// --- Elmish Game --- //
-// TODO: For better errors. Reintegrate gamestate into model update
+// --- Elm-ish architecture with a Model and Init, Update, View callbacks --- //
+
 pub type Message {
   SelectCard(g.Card)
   ToggleScoring
@@ -62,6 +62,8 @@ pub fn view(model: Model) -> html.Node(a) {
     score_popup(model.gamestate, model.toggle_scoring),
   ])
 }
+
+// --- Helpers to build the view  --- //
 
 fn game_info(
   state: g.GameState,
@@ -122,17 +124,17 @@ fn board(state: g.GameState, selected_card: Option(g.Card)) -> html.Node(a) {
       html.div([attrs.class("s2")], []),
       html.div([attrs.class("board s8 row")], [
         html.div([attrs.class("column center")], [
-          view_score_columns(state, g.Player2),
+          score_columns(state, g.Player2),
         ]),
         html.div([attrs.class("column center")], [
           view_slots(state, g.Player2, selected_card),
         ]),
-        html.div([attrs.class("column center")], [view_score_totals(state)]),
+        html.div([attrs.class("column center")], [score_totals(state)]),
         html.div([attrs.class("column center")], [
           view_slots(state, g.Player1, selected_card),
         ]),
         html.div([attrs.class("column center")], [
-          view_score_columns(state, g.Player1),
+          score_columns(state, g.Player1),
         ]),
       ]),
       html.div([attrs.class("s2")], []),
@@ -165,7 +167,16 @@ fn score_popup(state: g.GameState, toggle_scoring: Bool) -> html.Node(a) {
   }
 }
 
-// --- View board segments --- //
+fn hand(state: g.GameState, player: g.Player) -> html.Node(a) {
+  let hand = g.player_hand(state, of: player)
+
+  html.div(
+    [attrs.class("hand column")],
+    list.map(hand, fn(card) {
+      click([#("event", encode_select_card(player, card))], card_front(card))
+    }),
+  )
+}
 
 fn deck(state: g.GameState, player: g.Player) -> html.Node(a) {
   let size = g.deck_size(state)
@@ -173,7 +184,7 @@ fn deck(state: g.GameState, player: g.Player) -> html.Node(a) {
   click([#("event", encode_draw_card(player))], pile(size))
 }
 
-fn view_score_totals(state: g.GameState) -> html.Node(a) {
+fn score_totals(state: g.GameState) -> html.Node(a) {
   let totals = g.score_totals(state)
 
   html.div([attrs.class("totals scores")], {
@@ -196,7 +207,7 @@ fn view_score_totals(state: g.GameState) -> html.Node(a) {
   })
 }
 
-fn view_score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
+fn score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
   let columns = g.score_columns(state)
 
   let scores = case player {
@@ -237,17 +248,6 @@ fn view_score_columns(state: g.GameState, player: g.Player) -> html.Node(a) {
   })
 }
 
-fn hand(state: g.GameState, player: g.Player) -> html.Node(a) {
-  let hand = g.player_hand(state, of: player)
-
-  html.div(
-    [attrs.class("hand column")],
-    list.map(hand, fn(card) {
-      click([#("event", encode_select_card(player, card))], card_front(card))
-    }),
-  )
-}
-
 fn view_slots(
   state: g.GameState,
   player: g.Player,
@@ -272,7 +272,87 @@ fn view_slots(
   })
 }
 
-// --- View board components --- //
+fn scores(state: g.GameState) -> html.Node(a) {
+  let scores = g.score_columns(state)
+  let total = g.score_total(state)
+
+  let score_group =
+    ScoreGroup(#(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0))
+
+  let group = fn(group: ScoreGroup, score: g.Score) {
+    case score.formation {
+      g.StraightFlush -> {
+        let #(count, bonus) = group.straight_flush
+        let stats = #(count + 1, bonus + score.bonus_formation)
+        ScoreGroup(..group, straight_flush: stats)
+      }
+      g.ThreeOfAKind -> {
+        let #(count, bonus) = group.three_of_a_kind
+        let stats = #(count + 1, bonus + score.bonus_formation)
+        ScoreGroup(..group, three_of_a_kind: stats)
+      }
+      g.Straight -> {
+        let #(count, bonus) = group.straight
+        let stats = #(count + 1, bonus + score.bonus_formation)
+        ScoreGroup(..group, straight: stats)
+      }
+      g.Flush -> {
+        let #(count, bonus) = group.flush
+        let stats = #(count + 1, bonus + score.bonus_formation)
+        ScoreGroup(..group, flush: stats)
+      }
+      g.Pair -> {
+        let #(count, bonus) = group.pair
+        let stats = #(count + 1, bonus + score.bonus_formation)
+        ScoreGroup(..group, pair: stats)
+      }
+      g.HighCard -> {
+        let #(count, bonus) = group.highcard
+        let stats = #(count + 1, bonus + score.bonus_formation)
+        ScoreGroup(..group, highcard: stats)
+      }
+    }
+  }
+
+  let sum_score = fn(sum: Int, score: g.Score) { sum + score.score }
+  let sum_form = fn(sum: Int, score: g.Score) { sum + score.bonus_formation }
+  let sum_flank = fn(sum: Int, score: g.Score) { sum + score.bonus_flank }
+
+  let p1_scores = list.map(scores, pair.first)
+  let p1_score_group = list.fold(p1_scores, score_group, group)
+  let p1_card_total = list.fold(p1_scores, 0, sum_score)
+  let p1_form_total = list.fold(p1_scores, 0, sum_form)
+  let p1_flank_total = list.fold(p1_scores, 0, sum_flank)
+
+  let p2_scores = list.map(scores, pair.second)
+  let p2_score_group = list.fold(p2_scores, score_group, group)
+  let p2_card_total = list.fold(p2_scores, 0, sum_score)
+  let p2_form_total = list.fold(p2_scores, 0, sum_form)
+  let p2_flank_total = list.fold(p2_scores, 0, sum_flank)
+
+  html.div([attrs.class("final-score sparkle")], [
+    html.Fragment([
+      html.div([attrs.class("score-winner")], [html.h1_text([], "Game!")]),
+      html.div([attrs.class("score-group")], [
+        html.div([], [
+          group_table(p1_score_group),
+          html.Element("hr", [], []),
+          subtotals_table(p1_card_total, p1_form_total, p1_flank_total),
+          html.Element("hr", [], []),
+          totals_table(p1_card_total + p1_form_total + p1_flank_total),
+        ]),
+        html.div([], [
+          group_table(p2_score_group),
+          html.Element("hr", [], []),
+          subtotals_table(p2_card_total, p2_form_total, p2_flank_total),
+          html.Element("hr", [], []),
+          totals_table(p2_card_total + p2_form_total + p2_flank_total),
+        ]),
+      ]),
+      winner(total),
+    ]),
+  ])
+}
 
 fn card_front(card: g.Card) -> html.Node(a) {
   let utf = suit_utf(card.suit)
@@ -357,88 +437,6 @@ type ScoreGroup {
     flank_bonus: #(Int, Int),
     highcard: #(Int, Int),
   )
-}
-
-fn scores(state: g.GameState) -> html.Node(a) {
-  let scores = g.score_columns(state)
-  let total = g.score_total(state)
-
-  let score_group =
-    ScoreGroup(#(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0), #(0, 0))
-
-  let group = fn(group: ScoreGroup, score: g.Score) {
-    case score.formation {
-      g.StraightFlush -> {
-        let #(count, bonus) = group.straight_flush
-        let stats = #(count + 1, bonus + score.bonus_formation)
-        ScoreGroup(..group, straight_flush: stats)
-      }
-      g.ThreeOfAKind -> {
-        let #(count, bonus) = group.three_of_a_kind
-        let stats = #(count + 1, bonus + score.bonus_formation)
-        ScoreGroup(..group, three_of_a_kind: stats)
-      }
-      g.Straight -> {
-        let #(count, bonus) = group.straight
-        let stats = #(count + 1, bonus + score.bonus_formation)
-        ScoreGroup(..group, straight: stats)
-      }
-      g.Flush -> {
-        let #(count, bonus) = group.flush
-        let stats = #(count + 1, bonus + score.bonus_formation)
-        ScoreGroup(..group, flush: stats)
-      }
-      g.Pair -> {
-        let #(count, bonus) = group.pair
-        let stats = #(count + 1, bonus + score.bonus_formation)
-        ScoreGroup(..group, pair: stats)
-      }
-      g.HighCard -> {
-        let #(count, bonus) = group.highcard
-        let stats = #(count + 1, bonus + score.bonus_formation)
-        ScoreGroup(..group, highcard: stats)
-      }
-    }
-  }
-
-  let sum_score = fn(sum: Int, score: g.Score) { sum + score.score }
-  let sum_form = fn(sum: Int, score: g.Score) { sum + score.bonus_formation }
-  let sum_flank = fn(sum: Int, score: g.Score) { sum + score.bonus_flank }
-
-  let p1_scores = list.map(scores, pair.first)
-  let p1_score_group = list.fold(p1_scores, score_group, group)
-  let p1_card_total = list.fold(p1_scores, 0, sum_score)
-  let p1_form_total = list.fold(p1_scores, 0, sum_form)
-  let p1_flank_total = list.fold(p1_scores, 0, sum_flank)
-
-  let p2_scores = list.map(scores, pair.second)
-  let p2_score_group = list.fold(p2_scores, score_group, group)
-  let p2_card_total = list.fold(p2_scores, 0, sum_score)
-  let p2_form_total = list.fold(p2_scores, 0, sum_form)
-  let p2_flank_total = list.fold(p2_scores, 0, sum_flank)
-
-  html.div([attrs.class("final-score sparkle")], [
-    html.Fragment([
-      html.div([attrs.class("score-winner")], [html.h1_text([], "Game!")]),
-      html.div([attrs.class("score-group")], [
-        html.div([], [
-          group_table(p1_score_group),
-          html.Element("hr", [], []),
-          subtotals_table(p1_card_total, p1_form_total, p1_flank_total),
-          html.Element("hr", [], []),
-          totals_table(p1_card_total + p1_form_total + p1_flank_total),
-        ]),
-        html.div([], [
-          group_table(p2_score_group),
-          html.Element("hr", [], []),
-          subtotals_table(p2_card_total, p2_form_total, p2_flank_total),
-          html.Element("hr", [], []),
-          totals_table(p2_card_total + p2_form_total + p2_flank_total),
-        ]),
-      ]),
-      winner(total),
-    ]),
-  ])
 }
 
 fn group_table(group: ScoreGroup) -> html.Node(a) {
@@ -530,7 +528,7 @@ fn winner(total: #(Option(g.Player), Int)) -> html.Node(a) {
   ])
 }
 
-// --- View HTML Helpers --- //
+// --- This code encodes "clicks" into the HTML --- //
 
 fn click(
   params: List(#(String, BitArray)),
