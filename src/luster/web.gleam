@@ -14,6 +14,7 @@ import luster/systems/comp
 import luster/systems/pubsub
 import luster/systems/session
 import luster/systems/sessions
+import luster/systems/store
 import luster/web/socket
 import luster/web/tea_game
 import luster/web/tea_home
@@ -21,6 +22,7 @@ import mist
 import nakai
 import nakai/html
 import nakai/html/attrs
+import gleam/io
 
 pub fn router(
   request: request.Request(mist.Connection),
@@ -29,13 +31,17 @@ pub fn router(
 ) -> response.Response(mist.ResponseData) {
   case request.method, request.path_segments(request) {
     http.Get, [] -> {
-      let records =
-        sessions.all(store)
-        |> list.map(fn(record) { #(record.0, session.gamestate(record.1)) })
+      let static_records =
+        store.all()
+        |> list.map(fn(record) { record.0 })
 
-      tea_home.Model(records)
+      let live_records =
+        sessions.all(store)
+        |> list.map(fn(record) { record.0 })
+
+      tea_home.Model(list.concat([static_records, live_records]))
       |> tea_home.view()
-      |> render(with: fn(body) { layout("", body) })
+      |> render(with: fn(body) { layout("", False, body) })
     }
 
     http.Post, ["battleline"] -> {
@@ -53,9 +59,17 @@ pub fn router(
         Ok(subject) ->
           tea_game.init(session.gamestate(subject))
           |> tea_game.view()
-          |> render(with: fn(body) { layout(session_id, body) })
+          |> render(with: fn(body) { layout(session_id, True, body) })
 
-        Error(Nil) -> redirect("/")
+        Error(Nil) -> {
+          case store.one(id) {
+            Ok(view) ->
+              html.UnsafeInlineHtml(view)
+              |> render(with: fn(body) { layout(session_id, False, body) })
+
+            Error(Nil) -> redirect("/")
+          }
+        }
       }
     }
 
@@ -78,12 +92,22 @@ pub fn router(
   }
 }
 
-fn layout(session: String, body: html.Node(a)) -> html.Node(a) {
+fn layout(
+  session_id: String,
+  live_session: Bool,
+  body: html.Node(a),
+) -> html.Node(a) {
+  let live_session = case live_session {
+    True -> "true"
+    False -> ""
+  }
+
   html.Html([], [
     html.Head([
       html.title("Line Poker"),
       html.meta([attrs.name("viewport"), attrs.content("width=device-width")]),
-      html.meta([attrs.name("session"), attrs.content(session)]),
+      html.meta([attrs.name("session-id"), attrs.content(session_id)]),
+      html.meta([attrs.name("live-session"), attrs.content(live_session)]),
       html.link([
         attrs.rel("icon"),
         attrs.type_("image/x-icon"),

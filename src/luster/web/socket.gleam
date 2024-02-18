@@ -11,6 +11,7 @@ import gleam/result.{try}
 import luster/games/three_line_poker as g
 import luster/systems/pubsub.{type PubSub}
 import luster/systems/session
+import luster/systems/store
 import luster/web/tea_game as tea
 import mist.{
   type Connection, type ResponseData, type WebsocketConnection,
@@ -20,7 +21,7 @@ import nakai
 
 pub type Message {
   Update(tea.Message)
-  Cleanup
+  PrepareHalt
   Halt
 }
 
@@ -80,7 +81,7 @@ fn build_init(
     Some(
       process.new_selector()
       |> process.selecting(self, identity)
-      |> process.selecting_process_down(monitor, fn(_down) { Cleanup }),
+      |> process.selecting_process_down(monitor, fn(_down) { PrepareHalt }),
     ),
   )
 }
@@ -126,18 +127,26 @@ fn handle_message(
       Continue(State(..state, model: model), None)
     }
 
-    Custom(Cleanup) -> {
+    Custom(PrepareHalt) -> {
       // At this point, last update messages are still being broadcasted/enqueued in
       // the socket mailbox. This works as a kind of buffer to let them being  
       // processed before shutdown. 
       let id = int.to_string(state.session_id)
-      io.println("cleanup socket state for session " <> id)
+      io.println("preparing to halt socket for session " <> id)
       process.send_after(state.self, 5000, Halt)
       Continue(state, None)
     }
 
     Custom(Halt) -> {
-      // Now stop the socket for real.
+      // Rescue final state of the game via the in memory Model.
+      let model =
+        tea.init(state.model.gamestate)
+        |> tea.view()
+        |> nakai.to_inline_string()
+
+      store.create(state.session_id, model)
+
+      // And shutdown for real.
       Stop(Normal)
     }
 

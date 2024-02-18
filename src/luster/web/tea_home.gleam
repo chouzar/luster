@@ -1,13 +1,12 @@
 import gleam/int
 import gleam/list
-import luster/games/three_line_poker as g
 import nakai/html
 import nakai/html/attrs
 
 // --- Elm-ish architecture with a Model and View callback --- //
 
 pub type Model {
-  Model(games: List(#(Int, g.GameState)))
+  Model(games: List(Int))
 }
 
 type GameMode {
@@ -65,8 +64,7 @@ fn create_game_form(mode: GameMode, text: String) -> html.Node(a) {
   ])
 }
 
-fn dashboard_card(record: #(Int, g.GameState)) -> html.Node(a) {
-  let #(id, _state) = record
+fn dashboard_card(id: Int) -> html.Node(a) {
   let id = int.to_string(id)
   html.div([attrs.id(id), attrs.class("dashboard-card")], [
     html.div([attrs.class("link")], [link(id)]),

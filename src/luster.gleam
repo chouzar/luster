@@ -4,6 +4,7 @@ import gleam/http/request
 import gleam/http/response
 import luster/systems/pubsub
 import luster/systems/sessions
+import luster/systems/store
 import luster/web
 import mist
 
@@ -27,9 +28,17 @@ import mist
 // TODO: Create a compartment in Chip for unique subjects
 
 pub fn main() -> Nil {
+  // Start the persistence store but clean before starting.
+  let Nil = store.start()
+  let Nil = store.clean()
+
+  // Start the live sessions store.
   let assert Ok(store) = sessions.start()
+
+  // Start the pubsub system.
   let assert Ok(pubsub) = pubsub.start()
 
+  // Define middleware pipeline for server and start it.
   let request_pipeline = fn(request: request.Request(mist.Connection)) -> response.Response(
     mist.ResponseData,
   ) {
@@ -57,13 +66,13 @@ fn env(key: String) -> String {
 
 //const adjectives = [
 //  "salty", "brief", "noble", "glorious", "respectful", "tainted", "measurable",
-//  "constant", "fake", "lighting", "cool", "sparkling", "painful", "superperfect",
-//  "mighty"
+//  "constant", "fake", "lighting", "cool", "sparkling", "painful", "stealthy"
+//  "mighty", "activated", "lit", "memorable"
 //]
 //
 //const subjects = [
-//  "poker", "party", "battle", "danceoff", "bakeoff", "marathon", "club", "game",
-//  "match", "rounds", 
+//  "poker", "party", "danceoff", "bakeoff", "marathon", "club", "game",
+//  "match", "rounds", "trap card", "battleline", "duel", "dungeon"
 //]
 //
 //fn generate_name() -> String {
