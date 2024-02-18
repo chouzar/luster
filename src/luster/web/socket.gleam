@@ -105,7 +105,7 @@ fn handle_message(
         }
 
         Error(Nil) -> {
-          io.println("out of bound message:")
+          io.print("out of bound message: ")
           io.debug(bits)
           Continue(state, None)
         }
@@ -113,13 +113,14 @@ fn handle_message(
     }
 
     Custom(Update(message)) -> {
-      state.model
-      |> tea.update(message)
+      let model = tea.update(state.model, message)
+
+      model
       |> tea.view()
       |> nakai.to_inline_string()
       |> tap(mist.send_text_frame(conn, _))
 
-      Continue(state, None)
+      Continue(State(..state, model: model), None)
     }
 
     Custom(Cleanup) -> {
