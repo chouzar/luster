@@ -15,7 +15,7 @@ defmodule Luster.Store do
 
   def get(key) do
     case CubDB.fetch(__MODULE__, key) do
-      {:ok, value} -> value
+      {:ok, value} -> {:ok, value}
       :error -> {:error, nil}
     end
   end
