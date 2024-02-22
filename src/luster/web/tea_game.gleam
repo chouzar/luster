@@ -91,7 +91,7 @@ fn game_info(
     _, g.Draw, _selected -> "Draw a card from pile."
     _, g.Play, Some(_) -> "Play a card from hand."
     _, g.Play, None -> "Select a card from hand."
-    _, g.End, _ -> "Game!"
+    _, g.End, _ -> ""
   }
 
   let player = case

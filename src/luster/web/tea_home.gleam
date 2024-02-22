@@ -2,11 +2,13 @@ import gleam/int
 import gleam/list
 import nakai/html
 import nakai/html/attrs
+import luster/systems/store
+import luster/systems/session
 
 // --- Elm-ish architecture with a Model and View callback --- //
 
 pub type Model {
-  Model(games: List(Int))
+  Model(List(#(Int, String)))
 }
 
 type GameMode {
@@ -15,8 +17,28 @@ type GameMode {
   CompVsComp
 }
 
+pub fn init(store: session.Registry) -> Model {
+  let static_records =
+    store.all()
+    |> list.map(fn(record) { #(record.id, record.name) })
+
+  let live_records =
+    session.all_sessions(store)
+    |> list.map(session.get_record)
+    |> list.map(fn(record) { #(record.id, record.name) })
+
+  let render_records =
+    [static_records, live_records]
+    |> list.concat()
+    |> list.sort(fn(left, right) { int.compare(left.0, right.0) })
+
+  Model(render_records)
+}
+
 pub fn view(model: Model) -> html.Node(a) {
-  let cards = list.map(model.games, dashboard_card)
+  let Model(records) = model
+
+  let cards = list.map(records, dashboard_card)
   html.section([attrs.class("lobby")], [
     html.div([attrs.class("row center control-panel")], [
       html.div([attrs.class("column evenly")], [
@@ -64,10 +86,14 @@ fn create_game_form(mode: GameMode, text: String) -> html.Node(a) {
   ])
 }
 
-fn dashboard_card(id: Int) -> html.Node(a) {
+fn dashboard_card(record: #(Int, String)) -> html.Node(a) {
+  let #(id, name) = record
+
   let id = int.to_string(id)
   html.div([attrs.id(id), attrs.class("dashboard-card")], [
-    html.div([attrs.class("link")], [link(id)]),
+    html.div([attrs.class("link")], [
+      link("https://localhost:4444/battleline/" <> id, name),
+    ]),
     html.div([attrs.class("preview")], [frame(id)]),
   ])
 }
@@ -84,9 +110,6 @@ fn frame(id: String) -> html.Node(a) {
   )
 }
 
-fn link(id: String) -> html.Node(a) {
-  html.a_text(
-    [attrs.href("https://localhost:4444/battleline/" <> id)],
-    "Game " <> id,
-  )
+fn link(url: String, text: String) -> html.Node(a) {
+  html.a_text([attrs.href(url)], text)
 }

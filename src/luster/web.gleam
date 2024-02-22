@@ -6,14 +6,12 @@ import gleam/http/request
 import gleam/http/response
 import gleam/int
 import gleam/iterator
-import gleam/list
 import gleam/string
 import gleam/uri
 import luster/games/three_line_poker as tlp
 import luster/systems/comp
 import luster/systems/pubsub
 import luster/systems/session
-import luster/systems/sessions
 import luster/systems/store
 import luster/web/socket
 import luster/web/tea_game
@@ -22,24 +20,15 @@ import mist
 import nakai
 import nakai/html
 import nakai/html/attrs
-import gleam/io
 
 pub fn router(
   request: request.Request(mist.Connection),
-  store: sessions.Store,
+  store: session.Registry,
   pubsub: pubsub.PubSub(Int, socket.Message),
 ) -> response.Response(mist.ResponseData) {
   case request.method, request.path_segments(request) {
     http.Get, [] -> {
-      let static_records =
-        store.all()
-        |> list.map(fn(record) { record.0 })
-
-      let live_records =
-        sessions.all(store)
-        |> list.map(fn(record) { record.0 })
-
-      tea_home.Model(list.concat([static_records, live_records]))
+      tea_home.init(store)
       |> tea_home.view()
       |> render(with: fn(body) { layout("", False, body) })
     }
@@ -55,16 +44,18 @@ pub fn router(
     http.Get, ["battleline", session_id] -> {
       let assert Ok(id) = int.parse(session_id)
 
-      case sessions.one(store, id) {
-        Ok(subject) ->
-          tea_game.init(session.gamestate(subject))
+      case session.get_session(store, id) {
+        Ok(subject) -> {
+          let record = session.get_record(subject)
+          tea_game.init(record.gamestate)
           |> tea_game.view()
           |> render(with: fn(body) { layout(session_id, True, body) })
+        }
 
         Error(Nil) -> {
-          case store.one(id) {
-            Ok(view) ->
-              html.UnsafeInlineHtml(view)
+          case store.get(id) {
+            Ok(record) ->
+              html.UnsafeInlineHtml(record.document)
               |> render(with: fn(body) { layout(session_id, False, body) })
 
             Error(Nil) -> redirect("/")
@@ -76,8 +67,8 @@ pub fn router(
     http.Get, ["events", session_id] -> {
       let assert Ok(id) = int.parse(session_id)
 
-      case sessions.one(store, id) {
-        Ok(subject) -> socket.start(request, id, subject, pubsub)
+      case session.get_session(store, id) {
+        Ok(subject) -> socket.start(request, subject, pubsub)
         Error(Nil) -> not_found()
       }
     }
@@ -132,7 +123,7 @@ fn layout(
 
 fn create_games(
   params: List(#(String, String)),
-  store: sessions.Store,
+  store: session.Registry,
   pubsub: pubsub.PubSub(Int, socket.Message),
 ) {
   let #(quantity, rest) = case params {
@@ -146,18 +137,18 @@ fn create_games(
 
   let game_mode = case rest {
     [#("PlayerVsPlayer", _)] -> fn(_) {
-      let assert Ok(#(_id, _subject)) = sessions.create(store)
+      let assert Ok(_) = session.new_session(store)
       Nil
     }
     [#("PlayerVsComp", _)] -> fn(_) {
-      let assert Ok(#(id, subject)) = sessions.create(store)
-      let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
+      let assert Ok(subject) = session.new_session(store)
+      let assert Ok(_comp_2) = comp.start(tlp.Player2, subject, pubsub)
       Nil
     }
     [#("CompVsComp", _)] | _other -> fn(_) {
-      let assert Ok(#(id, subject)) = sessions.create(store)
-      let assert Ok(_comp_1) = comp.start(tlp.Player1, id, subject, pubsub)
-      let assert Ok(_comp_2) = comp.start(tlp.Player2, id, subject, pubsub)
+      let assert Ok(subject) = session.new_session(store)
+      let assert Ok(_comp_1) = comp.start(tlp.Player1, subject, pubsub)
+      let assert Ok(_comp_2) = comp.start(tlp.Player2, subject, pubsub)
       Nil
     }
   }
@@ -186,18 +177,21 @@ fn render(
     |> mist.Bytes
 
   response.new(200)
+  |> response.prepend_header("cache-control", "no-store, no-cache, max-age=0")
   |> response.prepend_header("content-type", content_type(HTML))
   |> response.set_body(document)
 }
 
 fn redirect(path: String) -> response.Response(mist.ResponseData) {
   response.new(303)
+  |> response.prepend_header("cache-control", "no-store, no-cache, max-age=0")
   |> response.prepend_header("location", path)
   |> response.set_body(mist.Bytes(bytes_builder.new()))
 }
 
 fn not_found() -> response.Response(mist.ResponseData) {
   response.new(404)
+  |> response.prepend_header("cache-control", "no-store, no-cache, max-age=0")
   |> response.prepend_header("content-type", content_type(TextPlain))
   |> response.set_body(mist.Bytes(bytes_builder.from_string("Not found")))
 }

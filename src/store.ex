@@ -5,7 +5,8 @@ defmodule Luster.Store do
   end
 
   def all() do
-    CubDB.select(__MODULE__) |> Enum.to_list()
+    CubDB.select(__MODULE__)
+    |> Enum.map(fn {_key, value} -> value end)
   end
 
   def put(key, value) do

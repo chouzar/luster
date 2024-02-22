@@ -11,7 +11,6 @@ import gleam/result.{try}
 import luster/games/three_line_poker as g
 import luster/systems/pubsub.{type PubSub}
 import luster/systems/session
-import luster/systems/store
 import luster/web/tea_game as tea
 import mist.{
   type Connection, type ResponseData, type WebsocketConnection,
@@ -42,13 +41,12 @@ pub opaque type State {
 
 pub fn start(
   request: Request(Connection),
-  session_id: Int,
   session: Subject(session.Message),
   pubsub: PubSub(Int, Message),
 ) -> Response(ResponseData) {
   mist.websocket(
     request: request,
-    on_init: build_init(_, session_id, session, pubsub),
+    on_init: build_init(_, session, pubsub),
     on_close: on_close,
     handler: handle_message,
   )
@@ -56,18 +54,20 @@ pub fn start(
 
 fn build_init(
   _conn: WebsocketConnection,
-  session_id: Int,
   session: Subject(session.Message),
   pubsub: PubSub(Int, Message),
 ) -> #(State, Option(Selector(Message))) {
   // Create an internal subject to send messages to itself
   let self = process.new_subject()
 
+  // Retrieve data from the session
+  let record = session.get_record(session)
+
   // Register the subject to broacast messages across sockets
-  pubsub.register(pubsub, session_id, self)
+  pubsub.register(pubsub, record.id, self)
 
   // Initialize a live TEA-like model for the socket
-  let model = tea.init(session.gamestate(session))
+  let model = tea.init(record.gamestate)
 
   // Monitor the session process so we can track if it goes down
   let monitor =
@@ -77,7 +77,7 @@ fn build_init(
 
   // Initialize state and enable selectors for self ref and the monitor ref
   #(
-    State(self, session_id, session, pubsub, model),
+    State(self, record.id, session, pubsub, model),
     Some(
       process.new_selector()
       |> process.selecting(self, identity)
@@ -138,14 +138,6 @@ fn handle_message(
     }
 
     Custom(Halt) -> {
-      // Rescue final state of the game via the in memory Model.
-      let model =
-        tea.init(state.model.gamestate)
-        |> tea.view()
-        |> nakai.to_inline_string()
-
-      store.create(state.session_id, model)
-
       // And shutdown for real.
       Stop(Normal)
     }

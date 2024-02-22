@@ -32,12 +32,11 @@ type State {
 
 pub fn start(
   player: g.Player,
-  session_id: Int,
   session: Subject(session.Message),
   pubsub: PubSub(Int, socket.Message),
 ) -> Result(Subject(Message), StartError) {
   actor.start_spec(Spec(
-    init: fn() { handle_init(player, session_id, session, pubsub) },
+    init: fn() { handle_init(player, session, pubsub) },
     init_timeout: 10,
     loop: handle_message,
   ))
@@ -45,11 +44,12 @@ pub fn start(
 
 fn handle_init(
   player: g.Player,
-  session_id: Int,
   session: Subject(session.Message),
   pubsub: PubSub(Int, socket.Message),
 ) -> InitResult(State, Message) {
   let self = process.new_subject()
+
+  let record = session.get_record(session)
 
   process.send(self, AssessMove)
 
@@ -59,7 +59,7 @@ fn handle_init(
     |> process.monitor_process()
 
   Ready(
-    State(self, session_id, player, session, pubsub),
+    State(self, record.id, player, session, pubsub),
     process.new_selector()
     |> process.selecting(self, identity)
     |> process.selecting_process_down(monitor, fn(_down) { Halt }),
@@ -70,8 +70,8 @@ fn handle_message(message: Message, state: State) -> Next(Message, State) {
   case message {
     AssessMove -> {
       let _ = {
-        let gamestate = session.gamestate(state.session)
-        use message <- try(assess_move(gamestate, state.player))
+        use record <- try(session.fetch_record(state.session))
+        use message <- try(assess_move(record.gamestate, state.player))
         broadcast_message(state, message)
         Ok(Nil)
       }
@@ -98,7 +98,6 @@ fn broadcast_message(state: State, message: g.Message) -> Nil {
   case session.next(state.session, message) {
     Ok(gamestate) -> {
       let message = tea.UpdateGame(gamestate)
-
       pubsub.broadcast(state.pubsub, state.session_id, socket.Update(message))
     }
 
