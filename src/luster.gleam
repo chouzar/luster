@@ -2,13 +2,23 @@ import envoy
 import gleam/erlang/process
 import gleam/http/request
 import gleam/http/response
-import luster/systems/pubsub
-import luster/systems/session
-import luster/systems/store
+import luster/line_poker/session
+import luster/line_poker/store
+import luster/pubsub
 import luster/web
 import mist
 
 // TODO: Add a proper supervision tree.
+
+// TODO: Add a proper ELMish loop (luster/web/elmish.gleam) and command system.
+//   * ELM loop callback.
+//   * Command system for side-effects.
+//   * Decoder/Encoder callbacks.
+// This would let me simplify the socket models.
+
+// TODO: Consider transition to Lustre framework.
+
+// TODO: Add open/close click to end game screen.
 
 pub fn main() -> Nil {
   // Start the persistence store but clean before starting.

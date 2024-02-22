@@ -4,7 +4,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/pair
 import gleam/string
-import luster/games/three_line_poker as g
+import luster/line_poker/game as g
 import nakai/html
 import nakai/html/attrs
 

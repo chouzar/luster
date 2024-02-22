@@ -8,18 +8,18 @@ import gleam/int
 import gleam/iterator
 import gleam/string
 import gleam/uri
-import luster/games/three_line_poker as tlp
-import luster/systems/comp
-import luster/systems/pubsub
-import luster/systems/session
-import luster/systems/store
-import luster/web/socket
-import luster/web/tea_game
-import luster/web/tea_home
+import luster/line_poker/computer_player
+import luster/line_poker/game as g
+import luster/line_poker/session
+import luster/line_poker/store
+import luster/pubsub
+import luster/web/home/view as tea_home
+import luster/web/layout
+import luster/web/line_poker/socket
+import luster/web/line_poker/view as tea_game
 import mist
 import nakai
 import nakai/html
-import nakai/html/attrs
 
 pub fn router(
   request: request.Request(mist.Connection),
@@ -30,7 +30,7 @@ pub fn router(
     http.Get, [] -> {
       tea_home.init(store)
       |> tea_home.view()
-      |> render(with: fn(body) { layout("", False, body) })
+      |> render(with: fn(body) { layout.view("", False, body) })
     }
 
     http.Post, ["battleline"] -> {
@@ -49,14 +49,14 @@ pub fn router(
           let record = session.get_record(subject)
           tea_game.init(record.gamestate)
           |> tea_game.view()
-          |> render(with: fn(body) { layout(session_id, True, body) })
+          |> render(with: fn(body) { layout.view(session_id, True, body) })
         }
 
         Error(Nil) -> {
           case store.get(id) {
             Ok(record) ->
               html.UnsafeInlineHtml(record.document)
-              |> render(with: fn(body) { layout(session_id, False, body) })
+              |> render(with: fn(body) { layout.view(session_id, False, body) })
 
             Error(Nil) -> redirect("/")
           }
@@ -83,44 +83,6 @@ pub fn router(
   }
 }
 
-fn layout(
-  session_id: String,
-  live_session: Bool,
-  body: html.Node(a),
-) -> html.Node(a) {
-  let live_session = case live_session {
-    True -> "true"
-    False -> ""
-  }
-
-  html.Html([], [
-    html.Head([
-      html.title("Line Poker"),
-      html.meta([attrs.name("viewport"), attrs.content("width=device-width")]),
-      html.meta([attrs.name("session-id"), attrs.content(session_id)]),
-      html.meta([attrs.name("live-session"), attrs.content(live_session)]),
-      html.link([
-        attrs.rel("icon"),
-        attrs.type_("image/x-icon"),
-        attrs.defer(),
-        attrs.href("/assets/favicon.ico"),
-      ]),
-      html.link([
-        attrs.rel("stylesheet"),
-        attrs.type_("text/css"),
-        attrs.defer(),
-        attrs.href("/assets/styles.css"),
-      ]),
-      html.Element(
-        tag: "script",
-        attrs: [attrs.src("/assets/script.js"), attrs.defer()],
-        children: [],
-      ),
-    ]),
-    html.Body([], [body]),
-  ])
-}
-
 fn create_games(
   params: List(#(String, String)),
   store: session.Registry,
@@ -142,13 +104,13 @@ fn create_games(
     }
     [#("PlayerVsComp", _)] -> fn(_) {
       let assert Ok(subject) = session.new_session(store)
-      let assert Ok(_comp_2) = comp.start(tlp.Player2, subject, pubsub)
+      let assert Ok(_comp_2) = computer_player.start(g.Player2, subject, pubsub)
       Nil
     }
     [#("CompVsComp", _)] | _other -> fn(_) {
       let assert Ok(subject) = session.new_session(store)
-      let assert Ok(_comp_1) = comp.start(tlp.Player1, subject, pubsub)
-      let assert Ok(_comp_2) = comp.start(tlp.Player2, subject, pubsub)
+      let assert Ok(_comp_1) = computer_player.start(g.Player1, subject, pubsub)
+      let assert Ok(_comp_2) = computer_player.start(g.Player2, subject, pubsub)
       Nil
     }
   }

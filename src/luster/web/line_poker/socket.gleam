@@ -8,10 +8,10 @@ import gleam/io
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor.{type Next, Continue, Stop}
 import gleam/result.{try}
-import luster/games/three_line_poker as g
-import luster/systems/pubsub.{type PubSub}
-import luster/systems/session
-import luster/web/tea_game as tea
+import luster/line_poker/game as g
+import luster/line_poker/session
+import luster/pubsub.{type PubSub}
+import luster/web/line_poker/view as tea
 import mist.{
   type Connection, type ResponseData, type WebsocketConnection,
   type WebsocketMessage, Binary, Closed, Custom, Shutdown, Text,

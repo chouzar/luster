@@ -7,10 +7,10 @@ import gleam/otp/actor.{
   type InitResult, type Next, type StartError, Continue, Ready, Spec, Stop,
 }
 import gleam/string
-import luster/games/three_line_poker as g
-import luster/systems/store
+import luster/line_poker/game as g
+import luster/line_poker/store
+import luster/web/line_poker/view as tea
 import nakai
-import luster/web/tea_game as tea
 
 // We treat this chip registry instance as registry so it has a mix of session subject 
 // operations as well as a CRUD-like API for retrieving its content (Record).
@@ -174,12 +174,13 @@ fn unique_integer(params: List(Param)) -> Int
 const adjectives = [
   "salty", "brief", "noble", "glorious", "respectful", "tainted", "measurable",
   "constant", "fake", "lighting", "cool", "sparkling", "painful", "stealthy",
-  "mighty", "activated", "lit", "memorable",
+  "mighty", "activated", "lit", "memorable", "pink", "usual",
 ]
 
 const subjects = [
   "poker", "party", "danceoff", "bakeoff", "marathon", "club", "game", "match",
-  "rounds", "trap card", "battleline", "duel", "dungeon",
+  "rounds", "battleline", "duel", "dungeon", "siege", "encounter", "trap",
+  "gleam", "routine", "thunder", "odyssey", "actor", "BEAM", "mockery",
 ]
 
 fn generate_name() -> String {

@@ -2,8 +2,8 @@ import gleam/int
 import gleam/list
 import nakai/html
 import nakai/html/attrs
-import luster/systems/store
-import luster/systems/session
+import luster/line_poker/session
+import luster/line_poker/store
 
 // --- Elm-ish architecture with a Model and View callback --- //
 
